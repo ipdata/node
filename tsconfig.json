@@ -3,15 +3,15 @@
     "baseUrl": ".",
     "module": "commonjs",
     "target": "es5",
+    "declaration": true,
     "noEmitHelpers": true,
     "importHelpers": true,
     "noEmitOnError": true,
     "lib": [
       "esnext"
-    ],
-    "sourceMap": true
+    ]
   },
-  "compileOnSave": true,
+  "compileOnSave": false,
   "include": [
     "src/**/*"
   ],
