@@ -1,7 +1,6 @@
 import * as request from 'request-promise';
 
-
-interface IPDataLookupResponse {
+export interface IPDataLookupResponse {
   ip: string,
   city: string,
   region: string,
