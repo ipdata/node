@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "module": "commonjs",
+    "target": "es5",
+    "noEmitHelpers": true,
+    "importHelpers": true,
+    "noEmitOnError": true,
+    "lib": [
+      "esnext"
+    ],
+    "sourceMap": true
+  },
+  "compileOnSave": true,
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "src/**/*.spec.ts"
+  ]
+}
