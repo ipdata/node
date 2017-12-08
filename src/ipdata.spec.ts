@@ -51,4 +51,13 @@ describe('lookup()', () => {
       time_zone: ''
     });
   });
+
+  it('should throw an error for a private ip', async () => {
+    try {
+      await lookup('203.0.113.0');
+      throw new Error('This test should fail.');
+    } catch (e) {
+      expect(e.message).to.equal('400 - "203.0.113.0 is a private IP address"');
+    }
+  });
 });
