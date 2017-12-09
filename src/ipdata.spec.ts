@@ -65,7 +65,7 @@ describe('lookup()', () => {
     });
   });
 
-  it('should set an api-key header for the network request if an apiKey is provided', async () => {
+  it('should set an api-key header if an apiKey is provided', async () => {
     const apiKey = 'testapikey';
     const response = {};
     const scope = nock('https://api.ipdata.co', {
@@ -77,6 +77,29 @@ describe('lookup()', () => {
       .reply(200, response);
 
     const ipInfo = await lookup(undefined, apiKey);
+    expect(ipInfo).to.deep.equal(response);
+  });
+
+  it('should set an ip and language in the uri', async () => {
+    const ip = '8.8.8.8';
+    const language = 'test';
+    const response = {};
+    const scope = nock('https://api.ipdata.co')
+      .get(`/${ip}/${language}`)
+      .reply(200, response);
+
+    const ipInfo = await lookup(ip, undefined, language);
+    expect(ipInfo).to.deep.equal(response);
+  });
+
+  it('should set the language in the uri', async () => {
+    const language = 'test';
+    const response = {};
+    const scope = nock('https://api.ipdata.co')
+      .get(`/${language}`)
+      .reply(200, response);
+
+    const ipInfo = await lookup(undefined, undefined, language);
     expect(ipInfo).to.deep.equal(response);
   });
 });
