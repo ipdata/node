@@ -22,13 +22,6 @@ export interface IPDataLookupResponse {
 }
 
 export async function lookup(ip?: string, apiKey?: string, language?: string): Promise<IPDataLookupResponse> {
-  // Regex found on https://www.regular-expressions.info/ip.html
-  const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-
-  if (ip != null && !ipRegex.test(ip)) {
-    return Promise.reject(new Error('Please provide a valid ip.'));
-  }
-
   let uri = 'https://api.ipdata.co/';
   let headers = {};
 
