@@ -1,6 +1,6 @@
 {
   "name": "ipdata",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "JavaScript library that can be used in a web browser or Node.js application to gather information using https://ipdata.co.",
   "main": "./dist/ipdata.js",
   "types": "./dist/ipdata.d.ts",
