@@ -1,10 +1,12 @@
 import { lookup } from './ipdata';
 import { expect } from 'chai';
+import * as nock from 'nock';
 
 describe('lookup()', () => {
   it('should throw an error for an empty string', async () => {
     try {
       await lookup('');
+      throw new Error('This test should fail.');
     } catch (e) {
       expect(e).to.be.instanceof(Error);
       expect(e.message).to.equal('Please provide a valid ip.');
@@ -14,6 +16,7 @@ describe('lookup()', () => {
   it('should throw an error for an invalid ip', async () => {
     try {
       await lookup('000.0000.00.00');
+      throw new Error('This test should fail.');
     } catch (e) {
       expect(e).to.be.instanceof(Error);
       expect(e.message).to.equal('Please provide a valid ip.');
@@ -60,5 +63,20 @@ describe('lookup()', () => {
       region: '',
       time_zone: ''
     });
+  });
+
+  it('should set an api-key header for the network request if an apiKey is provided', async () => {
+    const apiKey = 'testapikey';
+    const response = {};
+    const scope = nock('https://api.ipdata.co', {
+      reqheaders: {
+        'api-key': apiKey
+      }
+    })
+      .get('/')
+      .reply(200, response);
+
+    const ipInfo = await lookup(undefined, apiKey);
+    expect(ipInfo).to.deep.equal(response);
   });
 });
