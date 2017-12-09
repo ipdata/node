@@ -1,5 +1,5 @@
 import * as request from 'request-promise';
-import * as url from 'url';
+import * as urljoin from 'url-join';
 
 export interface IPDataLookupResponse {
   ip: string,
@@ -21,7 +21,7 @@ export interface IPDataLookupResponse {
   time_zone: string
 }
 
-export async function lookup(ip?: string, apiKey?: string): Promise<IPDataLookupResponse> {
+export async function lookup(ip?: string, apiKey?: string, language?: string): Promise<IPDataLookupResponse> {
   // Regex found on https://www.regular-expressions.info/ip.html
   const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
 
@@ -33,7 +33,11 @@ export async function lookup(ip?: string, apiKey?: string): Promise<IPDataLookup
   let headers = {};
 
   if (ip) {
-    uri = url.resolve(uri, ip);
+    uri = urljoin(uri, ip);
+  }
+
+  if (language) {
+    uri = urljoin(uri, language);
   }
 
   if (apiKey) {
