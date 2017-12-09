@@ -1,4 +1,5 @@
 import * as request from 'request-promise';
+import * as url from 'url';
 
 export interface IPDataLookupResponse {
   ip: string,
@@ -28,8 +29,20 @@ export async function lookup(ip?: string, apiKey?: string): Promise<IPDataLookup
     return Promise.reject(new Error('Please provide a valid ip.'));
   }
 
+  let uri = 'https://api.ipdata.co/';
+  let headers = {};
+
+  if (ip) {
+    uri = url.resolve(uri, ip);
+  }
+
+  if (apiKey) {
+    headers['api-key'] = String(apiKey);
+  }
+
   return await request({
-    uri: `https://api.ipdata.co/${ip ? ip : ''}`,
+    uri: uri,
+    headers: headers,
     json: true
   });
 }
