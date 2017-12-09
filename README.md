@@ -4,6 +4,7 @@ JavaScript library that can be used in a web browser or Node.js application to g
 
 **Table of Contents**
 - [Install](#install)
+- [Import the library](#import-the-library)
 - [Use](#use)
   * [Specify ip](#specify-ip)
   * [Specify api key](#specify-api-key)
@@ -13,6 +14,29 @@ JavaScript library that can be used in a web browser or Node.js application to g
 
 ```sh
 $ npm install ipdata
+```
+
+# Import the library
+
+Import the library under a namespace.
+
+```js
+import * as ipdata from 'ipdata';
+// ipdata.lookup()
+```
+
+Import just the lookup function.
+
+```js
+import { lookup } from 'ipdata';
+// lookup()
+```
+
+Require the library.
+
+```js
+var ipdata = require('ipdata');
+// ipdata.lookup()
 ```
 
 # Use
