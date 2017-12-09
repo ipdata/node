@@ -2,18 +2,9 @@ import { lookup } from './ipdata';
 import { expect } from 'chai';
 
 describe('lookup()', () => {
-  it('should throw an error if ip is undefined', async () => {
+  it('should throw an error for an empty string', async () => {
     try {
-      await lookup(undefined);
-    } catch (e) {
-      expect(e).to.be.instanceof(Error);
-      expect(e.message).to.equal('Please provide a valid ip.');
-    }
-  });
-
-  it('should throw an error if ip is null', async () => {
-    try {
-      await lookup(null);
+      await lookup('');
     } catch (e) {
       expect(e).to.be.instanceof(Error);
       expect(e.message).to.equal('Please provide a valid ip.');
@@ -27,6 +18,25 @@ describe('lookup()', () => {
       expect(e).to.be.instanceof(Error);
       expect(e.message).to.equal('Please provide a valid ip.');
     }
+  });
+
+  it('should throw an error for a private ip', async () => {
+    try {
+      await lookup('203.0.113.0');
+      throw new Error('This test should fail.');
+    } catch (e) {
+      expect(e.message).to.equal('400 - "203.0.113.0 is a private IP address"');
+    }
+  });
+
+  it('should return information when the ip is undefined', async () => {
+    const result = await lookup(undefined);
+    expect(result).to.not.be.undefined;
+  });
+
+  it('should return information when the ip is null', async () => {
+    const result = await lookup(null);
+    expect(result).to.not.be.undefined;
   });
 
   it('should return information for a valid ip', async () => {
@@ -50,14 +60,5 @@ describe('lookup()', () => {
       region: '',
       time_zone: ''
     });
-  });
-
-  it('should throw an error for a private ip', async () => {
-    try {
-      await lookup('203.0.113.0');
-      throw new Error('This test should fail.');
-    } catch (e) {
-      expect(e.message).to.equal('400 - "203.0.113.0 is a private IP address"');
-    }
   });
 });
