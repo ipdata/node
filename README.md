@@ -1,5 +1,7 @@
 # IPData JavaScript Library
 
+[![Build Status](https://travis-ci.org/thomasconner/ipdata-js-library.svg?branch=master)](https://travis-ci.org/thomasconner/ipdata-js-library)
+
 JavaScript library that can be used in a web browser or Node.js application to gather information using https://ipdata.co.
 
 **Table of Contents**
