@@ -1,0 +1,17 @@
+language: node_js
+node_js:
+- '9'
+
+deploy:
+  provider: npm
+  email: thomas.conner@me.com
+  api_key:
+    secure: UUgMCA+SqViVeoSMOzn7lbf+OV9bORIc5uFy0W/NL4Fx+UXvKOUTpKvmzRVwIm6A3iBpVJjUg8r51ScbMArZn9SUY/m74DPzZqiQvNp8jvJsTj6GVXBJZfOVbeG8bf+67VOeKJFInklC0KLg5f20ZH3NlYuCTZ8XGJxVvk/XJdxyuju+vFCZUMBIO9EpfaC9POwU33hDcaSbpuhnqhp3FzWxeQo/J3hLc7YllEmoEzYzd7S7WBvg6GoH+Xg1lVy8NO2C6I0HCFcApx4oDGwIbxEB5vw8urPdOKuDhiRUMMwvdT/oRMyOqu4kTlYTplv6cZB3H/Z9I9q7f63OkCznGCa5bSPn59aeRvR0ykZkzgbreibudEv7nHGEcKTvDca+t/DLjJWn9cxEGMBQ5RVccNPppATx72HjL6dyKfeXXOF9DGjSN97D+v2si/RNHiIt14KjCxmlr8SkWVVF1lzP62y32/q0mkn0orCcfsiEDZ/aj4O5TD8KgDxB/AuipEEJc+AqPKKPhk1Utr0gfYO95hV8wlL9u9iUQtmmXjnI214DxI13lU83N5vpM/YvhHlFHC3mj72r7+nHN0B8wmcJaY3lLMuiXHzScdqVOCy7XvrkFa2mK2Gh7tiUkiCh7NCmoKMlqvPGn3l+W1uT1kfanZMt8D9StR0XdklqZ2bX9xE=
+  on:
+    tags: true
+    repo: thomasconner/ipdata-js-library
+
+notifications:
+  email:
+    on_success: change
+    on_failure: always
