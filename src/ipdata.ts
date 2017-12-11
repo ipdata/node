@@ -21,7 +21,7 @@ export interface IPDataLookupResponse {
   time_zone: string
 }
 
-export async function lookup(ip?: string, apiKey?: string, language?: string): Promise<IPDataLookupResponse> {
+export function lookup(ip?: string, apiKey?: string, language?: string): Promise<IPDataLookupResponse> {
   let uri = 'https://api.ipdata.co/';
   let headers = {};
 
@@ -37,7 +37,7 @@ export async function lookup(ip?: string, apiKey?: string, language?: string): P
     headers['api-key'] = String(apiKey);
   }
 
-  return await request({
+  return request({
     uri: uri,
     headers: headers,
     json: true
