@@ -5,7 +5,7 @@
   "main": "./dist/ipdata.js",
   "types": "./dist/ipdata.d.ts",
   "scripts": {
-    "prebuild": "rimraf dist",
+    "prebuild": "rm -rf dist",
     "build": "tsc -p ./ --outDir dist/",
     "prepublishOnly": "npm run build",
     "test": "mocha -r ts-node/register src/**.spec.ts"
@@ -37,7 +37,6 @@
     "chai-as-promised": "^7.1.1",
     "mocha": "^4.0.1",
     "nock": "^9.1.4",
-    "rimraf": "^2.6.2",
     "ts-node": "^3.3.0",
     "typescript": "^2.6.2"
   }
