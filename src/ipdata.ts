@@ -34,7 +34,7 @@ export function lookup(ip?: string, apiKey?: string, language?: string): Promise
   }
 
   if (apiKey) {
-    headers['api-key'] = String(apiKey);
+    uri = urljoin(uri, `?api-key=${apiKey}`);
   }
 
   return request({

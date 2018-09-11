@@ -36,15 +36,12 @@ describe('lookup()', () => {
     expect(ipInfo).to.deep.equal(response);
   });
 
-  it('should set an api-key header if an apiKey is provided', async () => {
+  it('should set an apiKey in the uri if an apiKey is provided', async () => {
     const apiKey = 'testapikey';
     const response = {};
-    const scope = nock('https://api.ipdata.co', {
-      reqheaders: {
-        'api-key': apiKey
-      }
-    })
+    const scope = nock('https://api.ipdata.co')
       .get('/')
+      .query({ 'api-key': apiKey })
       .reply(200, response);
 
     const ipInfo = await lookup(undefined, apiKey);
