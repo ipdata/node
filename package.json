@@ -1,12 +1,12 @@
 {
   "name": "ipdata",
   "version": "1.1.1",
-  "description": "JavaScript library that can be used in a Node.js application to gather information for an ip using https://ipdata.co.",
-  "main": "./dist/ipdata.js",
-  "types": "./dist/ipdata.d.ts",
+  "description": "JavaScript library to gather information for an ip using https://ipdata.co.",
+  "main": "./lib/index.js",
   "scripts": {
-    "prebuild": "rm -rf dist",
-    "build": "tsc -p ./ --outDir dist/",
+    "prebuild": "del lib",
+    "build": "tsc",
+    "lint": "eslint --fix \"src/**\"",
     "prepublishOnly": "npm run build",
     "test": "mocha -r ts-node/register src/**.spec.ts"
   },
@@ -33,11 +33,23 @@
     "@types/nock": "9.3.0",
     "@types/node": "10.9.4",
     "@types/url-join": "0.8.2",
+    "@typescript-eslint/eslint-plugin": "^2.4.0",
+    "@typescript-eslint/parser": "^2.4.0",
     "chai": "4.1.2",
     "chai-as-promised": "7.1.1",
+    "del-cli": "^3.0.0",
+    "eslint": "^6.5.1",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-config-prettier": "^6.4.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-prettier": "^3.1.1",
     "mocha": "5.2.0",
     "nock": "9.6.1",
+    "prettier": "^1.18.2",
     "ts-node": "7.0.1",
-    "typescript": "3.0.3"
-  }
+    "typescript": "^3.6.4"
+  },
+  "files": [
+    "lib"
+  ]
 }
