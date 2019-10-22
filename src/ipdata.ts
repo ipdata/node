@@ -1,5 +1,5 @@
-import * as request from 'request-promise';
-import * as urljoin from 'url-join';
+import request from 'request-promise';
+import urljoin from 'url-join';
 
 // eslint-disable-next-line @typescript-eslint/interface-name-prefix
 export interface IPDataLookupResponse {
@@ -22,9 +22,9 @@ export interface IPDataLookupResponse {
   time_zone: string;
 }
 
-export function lookup(ip?: string, apiKey?: string, language?: string): Promise<IPDataLookupResponse> {
+export default function lookup(ip?: string, apiKey?: string, language?: string): Promise<IPDataLookupResponse> {
   let uri = 'https://api.ipdata.co/';
-  let headers = {};
+  const headers = {};
 
   if (ip) {
     uri = urljoin(uri, ip);
@@ -39,8 +39,8 @@ export function lookup(ip?: string, apiKey?: string, language?: string): Promise
   }
 
   return request({
-    uri: uri,
-    headers: headers,
+    uri,
+    headers,
     json: true,
   });
 }
