@@ -1,5 +1,12 @@
+import isString from 'lodash/isString';
 import request from 'request-promise';
 import urljoin from 'url-join';
+import LRU from 'lru-cache';
+
+const cache = new LRU<string, IPDataLookupResponse>({
+  max: 4096, // max number of items
+  maxAge: 1000 * 60 * 60 * 24, // 24 hours
+});
 
 // eslint-disable-next-line @typescript-eslint/interface-name-prefix
 export interface IPDataLookupResponse {
@@ -22,25 +29,28 @@ export interface IPDataLookupResponse {
   time_zone: string;
 }
 
-export default function lookup(ip?: string, apiKey?: string, language?: string): Promise<IPDataLookupResponse> {
-  let uri = 'https://api.ipdata.co/';
-  const headers = {};
+export async function lookup(ip?: string, apiKey?: string, language?: string): Promise<IPDataLookupResponse> {
+  let lookupIp = isString(ip) ? ip : '';
 
-  if (ip) {
-    uri = urljoin(uri, ip);
+  if (!cache.has(lookupIp)) {
+    const headers = {};
+    let uri = urljoin('https://api.ipdata.co/', lookupIp);
+
+    if (language) {
+      uri = urljoin(uri, language);
+    }
+
+    if (apiKey) {
+      uri = urljoin(uri, `?api-key=${apiKey}`);
+    }
+
+    const response = request({
+      uri,
+      headers,
+      json: true,
+    });
+    cache.set(lookupIp, response);
   }
 
-  if (language) {
-    uri = urljoin(uri, language);
-  }
-
-  if (apiKey) {
-    uri = urljoin(uri, `?api-key=${apiKey}`);
-  }
-
-  return request({
-    uri,
-    headers,
-    json: true,
-  });
+  return cache.get(lookupIp);
 }

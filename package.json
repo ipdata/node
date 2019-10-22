@@ -21,6 +21,8 @@
   },
   "homepage": "https://github.com/thomasconner/ipdata-js-library#readme",
   "dependencies": {
+    "lodash": "4.17.15",
+    "lru-cache": "5.1.1",
     "request": "2.88.0",
     "request-promise": "4.2.2",
     "tslib": "1.9.3",
@@ -29,6 +31,8 @@
   "devDependencies": {
     "@types/chai": "4.1.4",
     "@types/chai-as-promised": "7.1.0",
+    "@types/lodash": "4.14.144",
+    "@types/lru-cache": "5.1.0",
     "@types/mocha": "5.2.5",
     "@types/nock": "9.3.0",
     "@types/node": "10.9.4",

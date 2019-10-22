@@ -1,6 +1,6 @@
 import { lookup } from './ipdata';
 import { expect } from 'chai';
-import * as nock from 'nock';
+import nock from 'nock';
 
 describe('lookup()', () => {
   afterEach(() => {
@@ -31,7 +31,13 @@ describe('lookup()', () => {
     const scope = nock('https://api.ipdata.co')
       .get(`/${ip}`)
       .reply(200, response);
+    const ipInfo = await lookup(ip);
+    expect(ipInfo).to.deep.equal(response);
+  });
 
+  it('should return the response from the cache', async () => {
+    const ip = '8.8.8.8';
+    const response = {};
     const ipInfo = await lookup(ip);
     expect(ipInfo).to.deep.equal(response);
   });
