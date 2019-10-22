@@ -1,3 +1,5 @@
+const path = require('path');
+
 module.exports = {
   env: {
     browser: true,
@@ -10,15 +12,36 @@ module.exports = {
     'prettier/@typescript-eslint',
     'plugin:prettier/recommended',
   ],
-  globals: {
-    Atomics: 'readonly',
-    SharedArrayBuffer: 'readonly',
-  },
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    project: './tsconfig.json'
+    project: path.resolve(__dirname, './tsconfig.json')
   },
   plugins: [
     '@typescript-eslint',
-  ]
+  ],
+  rules: {
+    'lines-between-class-members': 'off',
+  },
+  overrides: [
+    {
+      files: ['**/*.test.js', '**/*.test.ts'],
+      rules: {
+        // Import
+        'import/no-extraneous-dependencies': 'off'
+      }
+      env: {
+        jest: true,
+      }
+    }
+  ],
+  settings: {
+    'import/resolver': {
+      node: {
+        extensions: [
+          '.js',
+          '.ts'
+        ]
+      }
+    }
+  }
 };
