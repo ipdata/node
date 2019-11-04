@@ -31,7 +31,10 @@ module.exports = {
       },
       env: {
         jest: true
-      }
+      },
+      parserOptions: {
+        project: path.resolve(__dirname, './tsconfig.test.json')
+      },
     }
   ],
   settings: {
