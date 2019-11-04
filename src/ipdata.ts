@@ -7,7 +7,6 @@ import LRU from 'lru-cache';
 
 const CACHE_MAX = 4096; // max number of items
 const CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
-const cache = new LRU<string, LookupResponse>({ max: CACHE_MAX, maxAge: CACHE_MAX_AGE });
 const DEFAULT_IP = 'DEFAULT_IP';
 const VALID_FIELDS = [
   'ip',
@@ -67,12 +66,10 @@ function isValidFields(fields: string[]): boolean {
   return true;
 }
 
-// export function clearCache(ip?: string): void {
-//   if (isValidIP(ip)) {
-//     return cache.del(ip);
-//   }
-//   return cache.reset();
-// }
+export interface CacheConfig {
+  max?: number;
+  maxAge?: number;
+}
 
 export interface LookupResponse {
   ip: string;
@@ -139,15 +136,15 @@ interface IPDataParams {
 
 export default class IPData {
   apiKey?: string;
-  useCache?: boolean;
+  cache?: LRU<string, LookupResponse>;
 
-  constructor(apiKey: string, useCache = true) {
+  constructor(apiKey: string, cacheConfig?: CacheConfig) {
     if (!isString(apiKey)) {
       throw new Error('An API key is required.');
     }
 
     this.apiKey = apiKey;
-    this.useCache = useCache === true;
+    this.cache = new LRU<string, LookupResponse>({ max: CACHE_MAX, maxAge: CACHE_MAX_AGE, ...cacheConfig });
   }
 
   async lookup(ip?: string, selectField?: string, fields?: string[]): Promise<LookupResponse> {
@@ -158,8 +155,8 @@ export default class IPData {
       throw new Error(`${ip} is an invalid IP address.`);
     }
 
-    if (this.useCache && cache.has(ip || DEFAULT_IP)) {
-      return cache.get(ip || DEFAULT_IP);
+    if (this.cache.has(ip || DEFAULT_IP)) {
+      return this.cache.get(ip || DEFAULT_IP);
     }
 
     if (selectField && fields) {
@@ -182,11 +179,7 @@ export default class IPData {
         data = { [selectField]: response.data, status: response.status };
       }
 
-      if ((!selectField || !fields) && this.useCache) {
-        cache.set(ip || DEFAULT_IP, data);
-      } else {
-        return data;
-      }
+      this.cache.set(ip || DEFAULT_IP, data);
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
@@ -195,11 +188,13 @@ export default class IPData {
       throw e;
     }
 
-    return cache.get(ip || DEFAULT_IP);
+    return this.cache.get(ip || DEFAULT_IP);
   }
 
   async bulkLookup(ips: string[], fields?: string[]): Promise<BulkLookupResponse> {
     const params: IPDataParams = { 'api-key': this.apiKey };
+    const responses: LookupResponse[] = [];
+    const bulk = [];
 
     if (ips.length < 2) {
       throw new Error('Bulk Lookup requires more than 1 IP Address in the payload.');
@@ -209,6 +204,12 @@ export default class IPData {
       if (!isValidIP(ip)) {
         throw new Error(`${ip} is an invalid IP address.`);
       }
+
+      if (this.cache.has(ip)) {
+        responses.push(this.cache.get(ip));
+      } else {
+        bulk.push(ip);
+      }
     });
 
     if (fields && isValidFields(fields)) {
@@ -216,8 +217,17 @@ export default class IPData {
     }
 
     try {
-      const response = await axios.post(urljoin(BASE_URL, 'bulk'), ips, { params });
-      return { responses: response.data, status: response.status };
+      let result: BulkLookupResponse = { responses, status: 200 };
+
+      if (bulk.length > 0) {
+        const response = await axios.post(urljoin(BASE_URL, 'bulk'), bulk, { params });
+        response.data.forEach(info => {
+          this.cache.set(info.ip, info);
+        });
+        result = { responses: [...responses, ...response.data], status: response.status };
+      }
+
+      return result;
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
