@@ -8,15 +8,16 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v1
-      - name: Install Node
+      - name: Install node
         uses: actions/setup-node@v1
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm install
       - name: Build
         run: npm run build
       - name: Release
-        uses: mikeal/merge-release@master
+        uses: primer/publish@master
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
