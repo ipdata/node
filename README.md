@@ -26,9 +26,7 @@ Import the library.
 import ipdata from 'ipdata';
 ```
 
-## Use
-
-First create an instance of the `IPData` class and pass your api key for IPData as the first parameter.
+Create an instance of the `IPData` class and pass your api key for IPData as the first parameter.
 
 ```js
 const ipdata = new IPData('<apiKey>');
@@ -84,9 +82,6 @@ ipdata.lookup(ip, null, fields)
     // ...
   });
 ```
-
-| WARNING: You are not able to specify only a select field and multiple fields at the same time. |
-| --- |
 
 ### Lookup Bulk
 
