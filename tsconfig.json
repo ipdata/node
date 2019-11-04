@@ -1,18 +1,13 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "declaration": true,
-    "esModuleInterop": true,
-    "importHelpers": true,
-    "lib": [
-      "es5",
-      "es2015.promise"
-    ],
-    "outDir": "lib",
-    "sourceMap": true,
-    "target": "es5"
+    "outDir": "lib"
   },
   "include": [
-    "src/**/*",
-    "test/**/*"
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts"
   ]
 }

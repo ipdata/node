@@ -1,4 +1,4 @@
-import IPData from '../src/ipdata';
+import IPData from './ipdata';
 
 describe('constructor()', () => {
   it('should throw an error if an apiKey is not provided', () => {
@@ -11,7 +11,7 @@ describe('constructor()', () => {
     const ipdata = new IPData(process.env.IPDATA_API_KEY);
     expect(ipdata.apiKey).toEqual(process.env.IPDATA_API_KEY);
   });
-})
+});
 
 describe('lookup()', () => {
   const ipdata = new IPData(process.env.IPDATA_API_KEY);

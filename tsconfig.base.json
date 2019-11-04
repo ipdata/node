@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "esModuleInterop": true,
+    "importHelpers": true,
+    "lib": [
+      "es5",
+      "es2015.promise"
+    ],
+    "sourceMap": true,
+    "target": "es5"
+  }
+}
