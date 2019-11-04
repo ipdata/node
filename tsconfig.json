@@ -5,7 +5,7 @@
     "importHelpers": true,
     "lib": [
       "es5",
-      "es2015.promise"
+      "es6"
     ],
     "outDir": "lib",
     "sourceMap": true,
