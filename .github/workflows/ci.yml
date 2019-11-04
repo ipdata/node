@@ -6,22 +6,23 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v1
-      - name: Install Node
+      - name: Install node
         uses: actions/setup-node@v1
-      - name: Install Dependencies
-        run: npm install
+      - name: Install dependencies
+        run: npm ci
       - name: Lint
         run: npm run lint
+
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v1
-      - name: Install Node
+      - name: Install node
         uses: actions/setup-node@v1
-      - name: Install Dependencies
-        run: npm install
+      - name: Install dependencies
+        run: npm ci
       - name: Test
         run: npm test
