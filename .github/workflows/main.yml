@@ -1,4 +1,4 @@
-name: Lint and Test
+name: CI/CD
 
 on: [push]
 
@@ -26,3 +26,21 @@ jobs:
         run: npm ci
       - name: Test
         run: npm test
+
+  release:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v1
+      - name: Install node
+        uses: actions/setup-node@v1
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Release
+        uses: primer/publish@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
