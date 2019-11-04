@@ -7,7 +7,6 @@
     "prebuild": "del lib",
     "build": "tsc",
     "lint": "eslint --fix \"src/**\"",
-    "prepublishOnly": "npm run build",
     "test": "jest"
   },
   "repository": {
