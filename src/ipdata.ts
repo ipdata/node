@@ -167,7 +167,7 @@ export default class IPData {
     return cache.get(ip || DEFAULT_IP);
   }
 
-  async lookupBulk(ips: string[], fields?: string[]): Promise<BulkLookupResponse> {
+  async bulkLookup(ips: string[], fields?: string[]): Promise<BulkLookupResponse> {
     const params: any = { 'api-key': this.apiKey };
 
     if (ips.length < 2) {

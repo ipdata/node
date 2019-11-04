@@ -96,14 +96,14 @@ describe('lookup()', () => {
   });
 });
 
-describe('lookupBulk()', () => {
+describe('bulkLookup()', () => {
   const ipdata = new IPData(API_KEY, false);
   const IP1 = '1.1.1.1';
   const IP2 = '8.8.8.8';
 
   it('should throw an error if less than 2 ips are provided', async () => {
     const ips = [IP1];
-    await expect(ipdata.lookupBulk(ips)).rejects.toThrowError(
+    await expect(ipdata.bulkLookup(ips)).rejects.toThrowError(
       'Bulk Lookup requires more than 1 IP Address in the payload.',
     );
   });
@@ -111,11 +111,11 @@ describe('lookupBulk()', () => {
   it('should throw an error if an ip is invalid', async () => {
     const badIP = '1.1.11';
     const ips = [badIP, IP2];
-    await expect(ipdata.lookupBulk(ips)).rejects.toThrowError(`${badIP} is an invalid IP address.`);
+    await expect(ipdata.bulkLookup(ips)).rejects.toThrowError(`${badIP} is an invalid IP address.`);
   });
 
   it('should return info for the ips', async () => {
-    const info = await ipdata.lookupBulk([IP1, IP2]);
+    const info = await ipdata.bulkLookup([IP1, IP2]);
     expect(info).toHaveProperty('responses');
     expect(info).toHaveProperty('status');
     expect(info.responses[0]).toHaveProperty('ip', IP1);
@@ -126,14 +126,14 @@ describe('lookupBulk()', () => {
     it('should throw an error for an invlaid field ', async () => {
       const field = 'field';
       const fields = [field];
-      await expect(ipdata.lookupBulk([IP1, IP2], fields)).rejects.toThrowError(`${field} is not a valid field.`);
+      await expect(ipdata.bulkLookup([IP1, IP2], fields)).rejects.toThrowError(`${field} is not a valid field.`);
     });
 
     it('should return a response with only the field', async () => {
       const field1 = 'ip';
       const field2 = 'is_eu';
       const fields = [field1, field2];
-      const info = await ipdata.lookupBulk([IP1, IP2], fields);
+      const info = await ipdata.bulkLookup([IP1, IP2], fields);
       expect(info).toHaveProperty('responses');
       expect(info).toHaveProperty('status');
       expect(info.responses[0]).toHaveProperty(field1, IP1);
