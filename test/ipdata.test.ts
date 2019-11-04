@@ -1,4 +1,4 @@
-import IPData from './ipdata';
+import IPData from '../src/ipdata';
 
 const API_KEY = 'test';
 
