@@ -1,7 +1,5 @@
 import IPData from '../src/ipdata';
 
-const API_KEY = 'test';
-
 describe('constructor()', () => {
   it('should throw an error if an apiKey is not provided', () => {
     // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
@@ -10,13 +8,13 @@ describe('constructor()', () => {
   });
 
   it('should set the apiKey', () => {
-    const ipdata = new IPData(API_KEY);
-    expect(ipdata.apiKey).toEqual(API_KEY);
+    const ipdata = new IPData(process.env.IPDATA_API_KEY);
+    expect(ipdata.apiKey).toEqual(process.env.IPDATA_API_KEY);
   });
 })
 
 describe('lookup()', () => {
-  const ipdata = new IPData(API_KEY);
+  const ipdata = new IPData(process.env.IPDATA_API_KEY);
   const IP = '1.1.1.1';
 
   afterEach(() => {
@@ -106,7 +104,7 @@ describe('lookup()', () => {
 });
 
 describe('bulkLookup()', () => {
-  const ipdata = new IPData(API_KEY);
+  const ipdata = new IPData(process.env.IPDATA_API_KEY);
   const IP1 = '1.1.1.1';
   const IP2 = '8.8.8.8';
 

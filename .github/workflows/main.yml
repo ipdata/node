@@ -25,6 +25,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Test
+        env:
+          IPDATA_API_KEY: ${{ secrets.IPDATA_API_KEY }}
         run: npm test
 
   release:
