@@ -1,7 +1,7 @@
 import isString from 'lodash/isString';
 import isArray from 'lodash/isArray';
 import isIP from 'is-ip';
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import axios, { AxiosError } from 'axios';
 import urljoin from 'url-join';
 import LRU from 'lru-cache';
 
@@ -9,14 +9,40 @@ const CACHE_MAX = 4096; // max number of items
 const CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
 const cache = new LRU<string, LookupResponse>({ max: CACHE_MAX, maxAge: CACHE_MAX_AGE });
 const DEFAULT_IP = 'DEFAULT_IP';
-const VALID_FIELDS=['ip', 'is_eu', 'city', 'region', 'region_code', 'country_name', 'country_code', 'continent_name', 'continent_code', 'latitude', 'longitude', 'asn', 'organisation', 'postal', 'calling_code', 'flag', 'emoji_flag', 'emoji_unicode', 'carrier', 'languages', 'currency', 'time_zone', 'threat', 'count', 'status'];
+const VALID_FIELDS = [
+  'ip',
+  'is_eu',
+  'city',
+  'region',
+  'region_code',
+  'country_name',
+  'country_code',
+  'continent_name',
+  'continent_code',
+  'latitude',
+  'longitude',
+  'asn',
+  'organisation',
+  'postal',
+  'calling_code',
+  'flag',
+  'emoji_flag',
+  'emoji_unicode',
+  'carrier',
+  'languages',
+  'currency',
+  'time_zone',
+  'threat',
+  'count',
+  'status',
+];
 const BASE_URL = 'https://api.ipdata.co/';
 
-function isValidIP(ip: string) {
+function isValidIP(ip: string): boolean {
   return ip === DEFAULT_IP || isIP(ip);
 }
 
-function isValidSelectField(field: string) {
+function isValidSelectField(field: string): boolean {
   const index = VALID_FIELDS.indexOf(field);
 
   if (index === -1) {
@@ -26,27 +52,27 @@ function isValidSelectField(field: string) {
   return true;
 }
 
-function isValidFields(fields: string[]) {
+function isValidFields(fields: string[]): boolean {
   if (!isArray(fields)) {
     throw new Error('Fields should be an array.');
   }
 
-  for (const field of fields) {
+  fields.forEach(field => {
     const index = VALID_FIELDS.indexOf(field);
     if (index === -1) {
       throw new Error(`${field} is not a valid field.`);
     }
-  }
+  });
 
   return true;
 }
 
-export function clearCache(ip?: string) {
-  if (isValidIP(ip)) {
-    return cache.del(ip);
-  }
-  return cache.reset();
-}
+// export function clearCache(ip?: string): void {
+//   if (isValidIP(ip)) {
+//     return cache.del(ip);
+//   }
+//   return cache.reset();
+// }
 
 export interface LookupResponse {
   ip: string;
@@ -101,15 +127,21 @@ export interface LookupResponse {
 }
 
 export interface BulkLookupResponse {
-  responses: LookupResponse[],
+  responses: LookupResponse[];
   status: number;
+}
+
+// eslint-disable-next-line @typescript-eslint/interface-name-prefix
+interface IPDataParams {
+  'api-key': string;
+  fields?: string;
 }
 
 export default class IPData {
   apiKey?: string;
   useCache?: boolean;
 
-  constructor(apiKey: string, useCache: boolean = true) {
+  constructor(apiKey: string, useCache = true) {
     if (!isString(apiKey)) {
       throw new Error('An API key is required.');
     }
@@ -119,7 +151,7 @@ export default class IPData {
   }
 
   async lookup(ip?: string, selectField?: string, fields?: string[]): Promise<LookupResponse> {
-    const params: any = { 'api-key': this.apiKey };
+    const params: IPDataParams = { 'api-key': this.apiKey };
     let url = ip ? urljoin(BASE_URL, ip) : BASE_URL;
 
     if (ip && !isValidIP(ip)) {
@@ -147,10 +179,10 @@ export default class IPData {
       let data = { ...response.data, status: response.status };
 
       if (selectField) {
-        data = { 'select_field': response.data, status: response.status };
+        data = { [selectField]: response.data, status: response.status };
       }
 
-      if (this.useCache) {
+      if ((!selectField || !fields) && this.useCache) {
         cache.set(ip || DEFAULT_IP, data);
       } else {
         return data;
@@ -158,27 +190,26 @@ export default class IPData {
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
-        return { ...response.data, status: response.status }
-      } else {
-        throw e;
+        return { ...response.data, status: response.status };
       }
+      throw e;
     }
 
     return cache.get(ip || DEFAULT_IP);
   }
 
   async bulkLookup(ips: string[], fields?: string[]): Promise<BulkLookupResponse> {
-    const params: any = { 'api-key': this.apiKey };
+    const params: IPDataParams = { 'api-key': this.apiKey };
 
     if (ips.length < 2) {
       throw new Error('Bulk Lookup requires more than 1 IP Address in the payload.');
     }
 
-    for (const ip of ips) {
+    ips.forEach(ip => {
       if (!isValidIP(ip)) {
         throw new Error(`${ip} is an invalid IP address.`);
       }
-    }
+    });
 
     if (fields && isValidFields(fields)) {
       params.fields = fields.join(',');
@@ -191,9 +222,8 @@ export default class IPData {
       const { response } = e as AxiosError;
       if (response) {
         return { ...response.data, status: response.status };
-      } else {
-        throw e;
       }
+      throw e;
     }
   }
 }

@@ -8,10 +8,15 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-node@v1
-      - run: npm install
-      - run: npm run build
-      - uses: mikeal/merge-release@master
+      - name: Checkout Repository
+        uses: actions/checkout@v1
+      - name: Install Node
+        uses: actions/setup-node@v1
+      - name: Install Dependencies
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Release
+        uses: mikeal/merge-release@master
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}

@@ -1,13 +1,12 @@
 {
   "name": "ipdata",
-  "version": "2.0.0-next.2",
+  "version": "2.0.0",
   "description": "JavaScript library to gather information for an ip using https://ipdata.co.",
   "main": "./lib/index.js",
   "scripts": {
     "prebuild": "del lib",
     "build": "tsc",
     "lint": "eslint --fix \"src/**\"",
-    "prepublishOnly": "npm run build",
     "test": "jest"
   },
   "repository": {

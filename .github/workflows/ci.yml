@@ -1,0 +1,27 @@
+name: Lint and Test
+
+on: [push]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1
+      - name: Install Node
+        uses: actions/setup-node@v1
+      - name: Install Dependencies
+        run: npm install
+      - name: Lint
+        run: npm run lint
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1
+      - name: Install Node
+        uses: actions/setup-node@v1
+      - name: Install Dependencies
+        run: npm install
+      - name: Test
+        run: npm test
