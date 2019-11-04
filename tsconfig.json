@@ -5,7 +5,7 @@
     "importHelpers": true,
     "lib": [
       "es5",
-      "es6"
+      "es2015.promise"
     ],
     "outDir": "lib",
     "sourceMap": true,
@@ -13,5 +13,9 @@
   },
   "include": [
     "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts"
   ]
 }
