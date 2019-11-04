@@ -83,24 +83,24 @@ ipdata.lookup(ip, null, fields)
   });
 ```
 
-### Lookup Bulk
+### Bulk Lookup
 
-You can lookup multiple ip addresses with one API call using the `lookupBulk()` method.
+You can lookup multiple ip addresses with one API call using the `bulkLookup()` method.
 
 ```js
-ipdata.lookupBulk(['1.1.1.1', '1.0.0.1'])
+ipdata.bulkLookup(['1.1.1.1', '1.0.0.1'])
   .then(function(info) {
     // info.responses[0].ip === 1.1.1.1
     // ...
   });
 ```
 
-You can specify only certain fields to be returned when looking up multiple ip addresses by passing an array of fields as the second parameter to the `lookupBulk()` method.
+You can specify only certain fields to be returned when looking up multiple ip addresses by passing an array of fields as the second parameter to the `bulkLookup()` method.
 
 ```js
 const ips = ['1.1.1.1', '1.0.0.1'];
 const fields = ['ip', 'city'];
-ipdata.lookupBulk(ips, fields)
+ipdata.bulkLookup(ips, fields)
   .then(function(info) {
     // ...
   });
