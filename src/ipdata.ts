@@ -176,7 +176,11 @@ export default class IPData {
 
     try {
       const response = await axios.get(url, { params });
-      const data = { ...response.data, status: response.status };
+      let data = { ...response.data, status: response.status };
+
+      if (selectField) {
+        data = { [selectField]: response.data, status: response.status };
+      }
 
       if ((!selectField || !fields) && this.useCache) {
         cache.set(ip || DEFAULT_IP, data);

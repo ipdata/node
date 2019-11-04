@@ -69,10 +69,10 @@ describe('lookup()', () => {
       await expect(ipdata.lookup(null, field)).rejects.toThrowError(`${field} is not a valid field.`);
     });
 
-    it('should return a response with only the field', async () => {
+    it.only('should return a response with only the field', async () => {
       const field = 'is_eu';
       const info = await ipdata.lookup(null, field);
-      expect(info).toHaveProperty('select_field', false);
+      expect(info).toHaveProperty(field, false);
       expect(info).toHaveProperty('status');
     });
   });
