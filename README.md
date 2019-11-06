@@ -2,15 +2,16 @@
 
 [![](https://github.com/ConnerTechnology/ipdata-js-library/workflows/CI/badge.svg)](https://github.com/ConnerTechnology/ipdata-js-library/actions)
 
-JavaScript library that can be used in a web browser or Node.js application to gather information using https://ipdata.co.
+JavaScript library that can be used in a web browser or Node.js application to gather information for an IP address using https://ipdata.co.
 
 **Table of Contents**
 
 - [Install](#install)
-- [Import the library](#import-the-library)
 - [Use](#use)
+  - [Import Library](#import-library)
+  - [Create an Instance](#create-an-instance)
   - [Lookup](#lookup)
-  - [Lookup Bulk](#lookup-bulk)
+  - [Bulk Lookup](#bulk-lookup)
 
 ## Install
 
@@ -18,13 +19,23 @@ JavaScript library that can be used in a web browser or Node.js application to g
 $ npm install ipdata
 ```
 
-## Import the library
+## Use
+
+### Import library
 
 Import the library.
 
 ```js
-import ipdata from 'ipdata';
+import IPData from 'ipdata';
 ```
+
+**Note:** If you are using `require()` then you will need to use the default value exported from the library.
+
+```js
+const IPData = require('ipdata').default;
+```
+
+### Create an Instance
 
 Create an instance of the `IPData` class and pass your api key for IPData as the first parameter.
 
@@ -56,19 +67,22 @@ const ipdata = new IPData('<apiKey>', cacheConfig);
 The library will lookup the ip address of the host computer if no ip address is provided.
 
 ```js
-ipdata.lookup().then(function(info) {
-  // info.ip === '<hostcomputerip>'
-  // ...
-});
+ipdata.lookup()
+  .then(function(info) {
+    // info.ip === '<hostcomputerip>'
+    // ...
+  });
 ```
 
 You can pass an ip address as the first parameter to the `lookup()` method to lookup information about the ip address using IPData.
 
 ```js
-ipdata.lookup('1.1.1.1').then(function(info) {
-  // info.ip === 1.1.1.1
-  // ...
-});
+const ip = '1.1.1.1';
+ipdata.lookup(ip)
+  .then(function(info) {
+    // info.ip === 1.1.1.1
+    // ...
+  });
 ```
 
 You can specify only a select field to be returned when looking up an ip address by passing a field as the second parameter to the `lookup()` method.
@@ -76,10 +90,11 @@ You can specify only a select field to be returned when looking up an ip address
 ```js
 const ip = '1.1.1.1';
 const selectField = 'ip';
-ipdata.lookup(ip, selectField).then(function(info) {
-  // info.select_field === 1.1.1.1
-  // ...
-});
+ipdata.lookup(ip, selectField)
+  .then(function(info) {
+    // info.select_field === 1.1.1.1
+    // ...
+  });
 ```
 
 You can specify only certain fields to be returned when looking up an ip address by passing an array of fields as the third parameter to the `lookup()` method.
@@ -87,9 +102,10 @@ You can specify only certain fields to be returned when looking up an ip address
 ```js
 const ip = '1.1.1.1';
 const fields = ['ip', 'city'];
-ipdata.lookup(ip, null, fields).then(function(info) {
-  // ...
-});
+ipdata.lookup(ip, null, fields)
+  .then(function(info) {
+    // ...
+  });
 ```
 
 ### Bulk Lookup
@@ -97,10 +113,12 @@ ipdata.lookup(ip, null, fields).then(function(info) {
 You can lookup multiple ip addresses with one API call using the `bulkLookup()` method.
 
 ```js
-ipdata.bulkLookup(['1.1.1.1', '1.0.0.1']).then(function(info) {
-  // info.responses[0].ip === 1.1.1.1
-  // ...
-});
+const ips = ['1.1.1.1', '1.0.0.1'];
+ipdata.bulkLookup(ips)
+  .then(function(info) {
+    // info[0].ip === 1.1.1.1
+    // ...
+  });
 ```
 
 You can specify only certain fields to be returned when looking up multiple ip addresses by passing an array of fields as the second parameter to the `bulkLookup()` method.
@@ -108,7 +126,8 @@ You can specify only certain fields to be returned when looking up multiple ip a
 ```js
 const ips = ['1.1.1.1', '1.0.0.1'];
 const fields = ['ip', 'city'];
-ipdata.bulkLookup(ips, fields).then(function(info) {
-  // ...
-});
+ipdata.bulkLookup(ips, fields)
+  .then(function(info) {
+    // ...
+  });
 ```
