@@ -123,11 +123,6 @@ export interface LookupResponse {
   status: number;
 }
 
-export interface BulkLookupResponse {
-  responses: LookupResponse[];
-  status: number;
-}
-
 // eslint-disable-next-line @typescript-eslint/interface-name-prefix
 interface IPDataParams {
   'api-key': string;
@@ -180,6 +175,7 @@ export default class IPData {
       }
 
       this.cache.set(ip || DEFAULT_IP, data);
+      return this.cache.get(ip || DEFAULT_IP);
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
@@ -187,11 +183,9 @@ export default class IPData {
       }
       throw e;
     }
-
-    return this.cache.get(ip || DEFAULT_IP);
   }
 
-  async bulkLookup(ips: string[], fields?: string[]): Promise<BulkLookupResponse> {
+  async bulkLookup(ips: string[], fields?: string[]): Promise<LookupResponse[]> {
     const params: IPDataParams = { 'api-key': this.apiKey };
     const responses: LookupResponse[] = [];
     const bulk = [];
@@ -217,17 +211,14 @@ export default class IPData {
     }
 
     try {
-      let result: BulkLookupResponse = { responses, status: 200 };
-
       if (bulk.length > 0) {
         const response = await axios.post(urljoin(BASE_URL, 'bulk'), bulk, { params });
         response.data.forEach(info => {
-          this.cache.set(info.ip, info);
+          this.cache.set(info.ip, { ...info, status: response.status });
+          responses.push(this.cache.get(info.ip));
         });
-        result = { responses: [...responses, ...response.data], status: response.status };
       }
-
-      return result;
+      return responses;
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
