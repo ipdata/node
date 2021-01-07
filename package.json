@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/thomasconner/ipdata-js-library#readme",
   "dependencies": {
-    "axios": "^0.19.0",
+    "axios": "^0.21.1",
     "is-ip": "^3.1.0",
     "lodash": "^4.17.15",
     "lru-cache": "^5.1.1",
