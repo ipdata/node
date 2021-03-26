@@ -39,16 +39,18 @@ const IPData = require('ipdata').default;
 
 Create an instance of the `IPData` class and pass your api key for IPData as the first parameter.
 
+> Note: If using a .env file, set the `APIDATA_API_KEY=` variable for auto-detection.
+
 ```js
 const ipdata = new IPData('<apiKey>');
 ```
 
-The library will cache 4096 ip addresses responses for 24 hours using a LRU cache by default. You can configure the cache by passing an object as the second paramenter.
+The library will cache 4096 ip addresses responses for 24 hours using a LRU cache by default. You can configure the cache by passing an object as the second parameter.
 
 ```js
 const cacheConfig = {
-  max: 1000, // max size
-  maxAge: 10 * 60 * 1000, // max age in ms (i.e. 10 minutes)
+    max: 1000, // max size
+    maxAge: 10 * 60 * 1000, // max age in ms (i.e. 10 minutes)
 };
 const ipdata = new IPData('<apiKey>', cacheConfig);
 ```
@@ -57,7 +59,7 @@ const ipdata = new IPData('<apiKey>', cacheConfig);
 
 ```js
 const cacheConfig = {
-  maxAge: -1, // disable the cache
+    maxAge: -1, // disable the cache
 };
 const ipdata = new IPData('<apiKey>', cacheConfig);
 ```
@@ -68,10 +70,10 @@ The library will lookup the ip address of the host computer if no ip address is 
 
 ```js
 ipdata.lookup()
-  .then(function(info) {
-    // info.ip === '<hostcomputerip>'
-    // ...
-  });
+    .then(function (info) {
+        // info.ip === '<hostcomputerip>'
+        // ...
+    });
 ```
 
 You can pass an ip address as the first parameter to the `lookup()` method to lookup information about the ip address using IPData.
@@ -79,10 +81,10 @@ You can pass an ip address as the first parameter to the `lookup()` method to lo
 ```js
 const ip = '1.1.1.1';
 ipdata.lookup(ip)
-  .then(function(info) {
-    // info.ip === 1.1.1.1
-    // ...
-  });
+    .then(function (info) {
+        // info.ip === 1.1.1.1
+        // ...
+    });
 ```
 
 You can specify only a select field to be returned when looking up an ip address by passing a field as the second parameter to the `lookup()` method.
@@ -90,11 +92,11 @@ You can specify only a select field to be returned when looking up an ip address
 ```js
 const ip = '1.1.1.1';
 const selectField = 'ip';
-ipdata.lookup(ip, selectField)
-  .then(function(info) {
-    // info.select_field === 1.1.1.1
-    // ...
-  });
+ipdata.lookup({ ip, selectField })
+    .then(function (info) {
+        // info.select_field === 1.1.1.1
+        // ...
+    });
 ```
 
 You can specify only certain fields to be returned when looking up an ip address by passing an array of fields as the third parameter to the `lookup()` method.
@@ -102,10 +104,10 @@ You can specify only certain fields to be returned when looking up an ip address
 ```js
 const ip = '1.1.1.1';
 const fields = ['ip', 'city'];
-ipdata.lookup(ip, null, fields)
-  .then(function(info) {
-    // ...
-  });
+ipdata.lookup({ ip, fields })
+    .then(function (info) {
+        // ...
+    });
 ```
 
 ### Bulk Lookup
@@ -115,10 +117,10 @@ You can lookup multiple ip addresses with one API call using the `bulkLookup()` 
 ```js
 const ips = ['1.1.1.1', '1.0.0.1'];
 ipdata.bulkLookup(ips)
-  .then(function(info) {
-    // info[0].ip === 1.1.1.1
-    // ...
-  });
+    .then(function (info) {
+        // info[0].ip === 1.1.1.1
+        // ...
+    });
 ```
 
 You can specify only certain fields to be returned when looking up multiple ip addresses by passing an array of fields as the second parameter to the `bulkLookup()` method.
@@ -126,8 +128,18 @@ You can specify only certain fields to be returned when looking up multiple ip a
 ```js
 const ips = ['1.1.1.1', '1.0.0.1'];
 const fields = ['ip', 'city'];
-ipdata.bulkLookup(ips, fields)
-  .then(function(info) {
-    // ...
-  });
+ipdata.bulkLookup({ ips, fields })
+    .then(function (info) {
+        // ...
+    });
+```
+
+## Executable
+
+An `lookup` executable is provided which can be accessed by running `npm link` on the project directory.
+
+```bash
+$ npm link
+$ lookup 1.1.1.1 <API-KEY> # If not using .env file.
+$ lookup 1.1.1.1 # If using .env file.
 ```
