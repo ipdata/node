@@ -21,6 +21,8 @@ import {
  *
  * @class
  * @classdesc Retrieves intelligence of a specified ip address from the IPData api.
+ * @requires {got}
+ * @see https://github.com/sindresorhus/got
  */
 export class IPData implements IPDataProvider {
   /**
@@ -44,7 +46,9 @@ export class IPData implements IPDataProvider {
    * @param {CacheConfig} cacheConfig
    */
   public constructor(apiKey?: string, cacheConfig?: CacheConfig) {
+    // Allows auto-resolution of api key from dotenv if none provided in constructor.
     this.apiKey = parseApiKey(apiKey);
+    // Establish a new cache instance to reduce repeat lookups if already known.
     this.cache = new LRU<string, LookupResponse>({ max: CACHE_MAX, maxAge: CACHE_MAX_AGE, ...cacheConfig });
   }
 
@@ -55,19 +59,23 @@ export class IPData implements IPDataProvider {
    * @return {Promise<LookupResponse>}
    */
   public async lookup(ipOrParams: string | LookupParams = {}): Promise<LookupResponse> {
+    // Allow users to specify a single string IP as shorthand, or a set of optional named params.
     const { ip, selectField, fields } = resolveLookupParams(ipOrParams);
     debug(`Lookup params received: `, { ip, selectField, fields });
     const url = getApiUrl(this.apiKey, ip);
 
+    // Abort if user has provided an invalid or empty IP.
     if (ip && !isValidIP(ip)) {
       throw new InvalidIpError(ip);
     }
 
+    // Check the LRU cache to minimize superfluous requests.
     if (this.cache.has(ip || DEFAULT_IP)) {
       debug(`Found ip ${ip} in cache.`);
       return this.cache.get(ip || DEFAULT_IP);
     }
 
+    // The api will not accept both a select field and a field array.
     if (selectField && fields) {
       throw new IncompatibleFieldCombinationError();
     }
@@ -77,12 +85,14 @@ export class IPData implements IPDataProvider {
       url.pathname = `${url.pathname}/${selectField}`;
     }
 
+    // Ensure requested fields are valid before adding to query string.
     if (fields && isValidFields(fields)) {
       debug(`Appending fields to request: `, fields);
       url.searchParams.append('fields', fields.join(','));
     }
 
     try {
+      // Send the finalised request to the API via the Got library.
       debug(`Dispatching request ${url.pathname}.`);
       const { body, statusCode, statusMessage } = await got.get<LookupResponse>(url.toString(), {
         responseType: 'json',
@@ -104,21 +114,27 @@ export class IPData implements IPDataProvider {
    * @return {Promise<LookupResponse[]>}
    */
   public async bulkLookup(ipOrParams: string[] | BulkLookupParams): Promise<LookupResponse[]> {
+    // Destructure params and allow a short-hand IP string as well as named params.
     const { ips, fields } = resolveBulkLookupParams(ipOrParams);
     const responses: LookupResponse[] = [];
     const bulk = [];
+
+    // Start a URL instance based on the the "/bulk" api stub.
     const url: URL = new URL('bulk', BASE_URL);
     url.searchParams.append('api-key', this.apiKey);
 
+    // Bulk lookups must request at least 2 IPs.
     if (ips.length < 2) {
       throw new BulkLookupError();
     }
 
     ips.forEach(ip => {
+      // Abort if user has provided an invalid IP.
       if (!isValidIP(ip)) {
         throw new InvalidIpError(ip);
       }
 
+      // Check the LRU cache to minimize superfluous requests.
       if (this.cache.has(ip)) {
         debug(`Found ip ${ip} in cache.`);
         responses.push(this.cache.get(ip));
@@ -128,6 +144,7 @@ export class IPData implements IPDataProvider {
       }
     });
 
+    // Add any specified valid fields to the query string.
     if (fields && isValidFields(fields)) {
       debug(`Appending fields to request: `, fields);
       url.searchParams.append('fields', fields.join(','));

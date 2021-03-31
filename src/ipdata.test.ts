@@ -13,12 +13,12 @@ import { IPData } from './ipdata';
 
 const TEST_IP = '1.1.1.1';
 const DEFAULT_IP_KEY = 'DEFAULT_IP';
-const backupKey = `${env.APIDATA_API_KEY}`;
+const backupKey = `${env.IPDATA_API_KEY}`;
 config();
 
 describe('constructor()', () => {
   it('should throw an error if an apiKey is not provided', async () => {
-    env.APIDATA_API_KEY = undefined;
+    env.IPDATA_API_KEY = undefined;
     // @ts-ignore
     expect(() => new IPData()).toThrow(new MissingApiKeyError().message);
     env.IPDATA_API_KEY = backupKey;

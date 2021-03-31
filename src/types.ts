@@ -1,3 +1,9 @@
+import LRU from 'lru-cache';
+
+export type LookupCache = LRU<string, LookupResponse>;
+
+export type LookupError = Error & { response?: { data: LookupResponse; statusCode: number; statusMessage?: string } };
+
 export interface IPDataParams {
   'api-key': string;
   fields?: string;
@@ -79,8 +85,10 @@ export interface LookupResponse {
   statusMessage?: string;
 }
 
-export type LookupError = Error & { response?: { data: LookupResponse; statusCode: number; statusMessage?: string } };
-
 export interface Env extends Record<string, string> {
   IPDATA_API_KEY?: string;
+  CACHE_MAX_SIZE?: string;
+  CACHE_MAX_AGE?: string;
+  DEFAULT_IP?: string;
+  BASE_URL?: string;
 }

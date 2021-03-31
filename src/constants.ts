@@ -3,9 +3,10 @@ import { Env } from './types';
 
 export const env: DotenvParseOutput & Env = config().parsed;
 
-export const CACHE_MAX = 4096; // max number of items
-export const CACHE_MAX_AGE: number = 1000 * 60 * 60 * 24; // 24 hours
-export const DEFAULT_IP = 'DEFAULT_IP';
+export const CACHE_MAX = env.CACHE_MAX_SIZE ? parseInt(env.CACHE_MAX_SIZE, 10) : 4096; // max number of items
+export const CACHE_MAX_AGE: number = env.CACHE_MAX_AGE ? parseInt(env.CACHE_MAX_AGE, 10) : 1000 * 60 * 60 * 24; // 24 hours
+export const DEFAULT_IP = env.DEFAULT_IP || 'DEFAULT_IP';
+export const BASE_URL = env.BASE_URL || 'https://api.ipdata.co/';
 export const VALID_FIELDS = [
   'ip',
   'is_eu',
@@ -33,4 +34,3 @@ export const VALID_FIELDS = [
   'count',
   'status',
 ];
-export const BASE_URL = 'https://api.ipdata.co/';

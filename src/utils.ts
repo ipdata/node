@@ -31,6 +31,7 @@ export function resolveLookupParams(ipOrParams: string | LookupParams | undefine
 
 /**
  * Parses bulk lookup method signature to allow shorthand ip string call.
+ *
  * @param {string | BulkLookupParams} ipOrParams
  * @return {BulkLookupParams}
  */
@@ -50,13 +51,23 @@ export function resolveBulkLookupParams(ipOrParams: string[] | BulkLookupParams)
  * @param {string} apiKey
  */
 export function parseApiKey(apiKey?: string): string {
+  let key: string | undefined;
+  // Use provided key as priority;
   if (typeof apiKey === 'string' && apiKey.length) {
-    debug(`Using api key with length: ${apiKey.length}`);
-    return apiKey;
+    debug(`Using api key provided by constructor.`);
+    key = apiKey;
   }
-  if (!apiKey && env.APIDATA_API_KEY) {
+  // Attempt to auto-resolve a key from environment.
+  if (!key && env.IPDATA_API_KEY) {
     debug(`Using api key from environment variables.`);
-    return `${env.APIDATA_API_KEY}`;
+    return `${env.IPDATA_API_KEY}`;
+  }
+  // Return a valid key with a warning for incorrect length, or abort.
+  if (key) {
+    if (key.length !== 56) {
+      debug(`WARN: Attempting to use a key with a potentially invalid length of ${apiKey.length}.`);
+    }
+    return key;
   }
   throw new MissingApiKeyError();
 }
@@ -110,6 +121,7 @@ export function isValidSelectField(field: string): boolean {
  * @return {boolean}
  */
 export function isValidFields(fields: string[]): boolean {
+  // Fields must be an array.
   if (!Array.isArray(fields)) {
     throw new InvalidFieldFormatError('array');
   }

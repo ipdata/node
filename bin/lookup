@@ -4,7 +4,7 @@
     const args = process.argv.slice(2)
     const { IPData } = require("../lib/ipdata")
     const ip = args[0] || undefined
-    const apiKey = args[1] || process.env.APIDATA_API_KEY || undefined
+    const apiKey = args[1] || undefined
     const ipdata = await new IPData(apiKey)
     const lookup = await ipdata.lookup(ip)
     console.log(`IPData lookup result: `, lookup)
