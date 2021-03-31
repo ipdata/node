@@ -1,230 +1,170 @@
-import isString from 'lodash/isString';
-import isArray from 'lodash/isArray';
-import isIP from 'is-ip';
-import axios, { AxiosError } from 'axios';
-import urljoin from 'url-join';
+import got from 'got';
 import LRU from 'lru-cache';
+import { URL } from 'url';
+import { BASE_URL, CACHE_MAX, CACHE_MAX_AGE, DEFAULT_IP } from './constants';
+import { BulkLookupError, IncompatibleFieldCombinationError, InvalidIpError } from './errors';
+import { BulkLookupParams, CacheConfig, IPDataProvider, LookupParams, LookupResponse } from './types';
+import {
+  debug,
+  getApiUrl,
+  handleLookupError,
+  isValidFields,
+  isValidIP,
+  isValidSelectField,
+  parseApiKey,
+  resolveBulkLookupParams,
+  resolveLookupParams,
+} from './utils';
 
-const CACHE_MAX = 4096; // max number of items
-const CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
-const DEFAULT_IP = 'DEFAULT_IP';
-const VALID_FIELDS = [
-  'ip',
-  'is_eu',
-  'city',
-  'region',
-  'region_code',
-  'country_name',
-  'country_code',
-  'continent_name',
-  'continent_code',
-  'latitude',
-  'longitude',
-  'asn',
-  'organisation',
-  'postal',
-  'calling_code',
-  'flag',
-  'emoji_flag',
-  'emoji_unicode',
-  'carrier',
-  'languages',
-  'currency',
-  'time_zone',
-  'threat',
-  'count',
-  'status',
-];
-const BASE_URL = 'https://api.ipdata.co/';
+/**
+ * IPData Node API
+ *
+ * @class
+ * @classdesc Retrieves intelligence of a specified ip address from the IPData api.
+ * @requires {got}
+ * @see https://github.com/sindresorhus/got
+ */
+export class IPData implements IPDataProvider {
+  /**
+   * Client provided API key for authentication.
+   * @type {string}
+   */
+  public apiKey: string;
 
-function isValidIP(ip: string): boolean {
-  return ip === DEFAULT_IP || isIP(ip);
-}
+  /**
+   * Active LRU cache to reduce queries.
+   *
+   * @type {LRU<string, LookupResponse>}
+   */
+  public cache: LRU<string, LookupResponse>;
 
-function isValidSelectField(field: string): boolean {
-  const index = VALID_FIELDS.indexOf(field);
-
-  if (index === -1) {
-    throw new Error(`${field} is not a valid field.`);
-  }
-
-  return true;
-}
-
-function isValidFields(fields: string[]): boolean {
-  if (!isArray(fields)) {
-    throw new Error('Fields should be an array.');
-  }
-
-  fields.forEach(field => {
-    const index = VALID_FIELDS.indexOf(field);
-    if (index === -1) {
-      throw new Error(`${field} is not a valid field.`);
-    }
-  });
-
-  return true;
-}
-
-export interface CacheConfig {
-  max?: number;
-  maxAge?: number;
-}
-
-export interface LookupResponse {
-  ip: string;
-  is_eu: boolean;
-  city?: string;
-  region?: string;
-  region_code?: string;
-  country_name: string;
-  country_code: string;
-  continent_name: string;
-  continent_code: string;
-  latitude: number;
-  longitude: number;
-  postal?: string;
-  calling_code: string;
-  flag: string;
-  emoji_flag: string;
-  emoji_unicode: string;
-  asn: {
-    asn: string;
-    name: string;
-    domain: string;
-    route: string;
-    type: string;
-  };
-  languages: { name: string; native: string }[];
-  currency: {
-    name: string;
-    code: string;
-    symbol: string;
-    native: string;
-    plural: string;
-  };
-  time_zone: {
-    name: string;
-    abbr: string;
-    offset: string;
-    is_dst: boolean;
-    current_time: string;
-  };
-  threat: {
-    is_tor: boolean;
-    is_proxy: boolean;
-    is_anonymous: boolean;
-    is_known_attacker: boolean;
-    is_known_abuser: boolean;
-    is_threat: boolean;
-    is_bogon: boolean;
-  };
-  count: number;
-  status: number;
-}
-
-// eslint-disable-next-line @typescript-eslint/interface-name-prefix
-interface IPDataParams {
-  'api-key': string;
-  fields?: string;
-}
-
-export default class IPData {
-  apiKey?: string;
-  cache?: LRU<string, LookupResponse>;
-
-  constructor(apiKey: string, cacheConfig?: CacheConfig) {
-    if (!isString(apiKey)) {
-      throw new Error('An API key is required.');
-    }
-
-    this.apiKey = apiKey;
+  /**
+   * Constructor
+   * Accepts api key and optional cache config.
+   *
+   * @param {string} apiKey
+   * @param {CacheConfig} cacheConfig
+   */
+  public constructor(apiKey?: string, cacheConfig?: CacheConfig) {
+    // Allows auto-resolution of api key from dotenv if none provided in constructor.
+    this.apiKey = parseApiKey(apiKey);
+    // Establish a new cache instance to reduce repeat lookups if already known.
     this.cache = new LRU<string, LookupResponse>({ max: CACHE_MAX, maxAge: CACHE_MAX_AGE, ...cacheConfig });
   }
 
-  async lookup(ip?: string, selectField?: string, fields?: string[]): Promise<LookupResponse> {
-    const params: IPDataParams = { 'api-key': this.apiKey };
-    let url = ip ? urljoin(BASE_URL, ip) : BASE_URL;
+  /**
+   * Performs remote lookup on the IPData api.
+   *
+   * @param {string | LookupParams | undefined} ipOrParams
+   * @return {Promise<LookupResponse>}
+   */
+  public async lookup(ipOrParams: string | LookupParams = {}): Promise<LookupResponse> {
+    // Allow users to specify a single string IP as shorthand, or a set of optional named params.
+    const { ip, selectField, fields } = resolveLookupParams(ipOrParams);
+    debug(`Lookup params received: `, { ip, selectField, fields });
+    const url = getApiUrl(this.apiKey, ip);
 
+    // Abort if user has provided an invalid or empty IP.
     if (ip && !isValidIP(ip)) {
-      throw new Error(`${ip} is an invalid IP address.`);
+      throw new InvalidIpError(ip);
     }
 
+    // Check the LRU cache to minimize superfluous requests.
     if (this.cache.has(ip || DEFAULT_IP)) {
+      debug(`Found ip ${ip} in cache.`);
       return this.cache.get(ip || DEFAULT_IP);
     }
 
+    // The api will not accept both a select field and a field array.
     if (selectField && fields) {
-      throw new Error('The selectField and fields parameters cannot be used at the same time.');
+      throw new IncompatibleFieldCombinationError();
     }
 
     if (selectField && isValidSelectField(selectField)) {
-      url = urljoin(url, selectField);
+      debug(`Appending ${selectField} to url path.`);
+      url.pathname = `${url.pathname}/${selectField}`;
     }
 
+    // Ensure requested fields are valid before adding to query string.
     if (fields && isValidFields(fields)) {
-      params.fields = fields.join(',');
+      debug(`Appending fields to request: `, fields);
+      url.searchParams.append('fields', fields.join(','));
     }
 
     try {
-      const response = await axios.get(url, { params });
-      let data = { ...response.data, status: response.status };
+      // Send the finalised request to the API via the Got library.
+      debug(`Dispatching request ${url.pathname}.`);
+      const { body, statusCode, statusMessage } = await got.get<LookupResponse>(url.toString(), {
+        responseType: 'json',
+      });
 
-      if (selectField) {
-        data = { [selectField]: response.data, status: response.status };
-      }
+      const data: LookupResponse = { ...body, status: statusCode, statusMessage };
 
       this.cache.set(ip || DEFAULT_IP, data);
       return this.cache.get(ip || DEFAULT_IP);
     } catch (e) {
-      const { response } = e as AxiosError;
-      if (response) {
-        return { ...response.data, status: response.status };
-      }
-      throw e;
+      return handleLookupError(e);
     }
   }
 
-  async bulkLookup(ips: string[], fields?: string[]): Promise<LookupResponse[]> {
-    const params: IPDataParams = { 'api-key': this.apiKey };
+  /**
+   * Performs a bulk lookup request against the IPData api.
+   *
+   * @param {string[] | BulkLookupParams} ipOrParams
+   * @return {Promise<LookupResponse[]>}
+   */
+  public async bulkLookup(ipOrParams: string[] | BulkLookupParams): Promise<LookupResponse[]> {
+    // Destructure params and allow a short-hand IP string as well as named params.
+    const { ips, fields } = resolveBulkLookupParams(ipOrParams);
     const responses: LookupResponse[] = [];
     const bulk = [];
 
+    // Start a URL instance based on the the "/bulk" api stub.
+    const url: URL = new URL('bulk', BASE_URL);
+    url.searchParams.append('api-key', this.apiKey);
+
+    // Bulk lookups must request at least 2 IPs.
     if (ips.length < 2) {
-      throw new Error('Bulk Lookup requires more than 1 IP Address in the payload.');
+      throw new BulkLookupError();
     }
 
     ips.forEach(ip => {
+      // Abort if user has provided an invalid IP.
       if (!isValidIP(ip)) {
-        throw new Error(`${ip} is an invalid IP address.`);
+        throw new InvalidIpError(ip);
       }
 
+      // Check the LRU cache to minimize superfluous requests.
       if (this.cache.has(ip)) {
+        debug(`Found ip ${ip} in cache.`);
         responses.push(this.cache.get(ip));
       } else {
+        debug(`Did not find ip ${ip} in cache, adding to request.`);
         bulk.push(ip);
       }
     });
 
+    // Add any specified valid fields to the query string.
     if (fields && isValidFields(fields)) {
-      params.fields = fields.join(',');
+      debug(`Appending fields to request: `, fields);
+      url.searchParams.append('fields', fields.join(','));
     }
 
     try {
       if (bulk.length > 0) {
-        const response = await axios.post(urljoin(BASE_URL, 'bulk'), bulk, { params });
-        response.data.forEach(info => {
-          this.cache.set(info.ip, { ...info, status: response.status });
+        debug(`Dispatching request ${url.pathname}.`);
+        const { body, statusCode, statusMessage } = await got.post<LookupResponse[]>(url.toString(), {
+          json: bulk,
+          responseType: 'json',
+        });
+        body.forEach(info => {
+          this.cache.set(info.ip, { ...info, status: statusCode, statusMessage });
           responses.push(this.cache.get(info.ip));
         });
       }
       return responses;
     } catch (e) {
-      const { response } = e as AxiosError;
-      if (response) {
-        return { ...response.data, status: response.status };
-      }
-      throw e;
+      return [handleLookupError(e)];
     }
   }
 }

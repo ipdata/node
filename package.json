@@ -1,54 +1,57 @@
 {
   "name": "ipdata",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "description": "JavaScript library to gather information for an ip using https://ipdata.co.",
-  "main": "./lib/ipdata.js",
+  "homepage": "https://github.com/ipdata/node#readme",
+  "bugs": {
+    "url": "https://github.com/ipdata/node/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ipdata/node.git"
+  },
+  "license": "MIT",
+  "author": "Thomas Conner <thomas.conner@me.com>",
+  "main": "./lib/index.js",
+  "files": [
+    "lib",
+    "bin"
+  ],
+  "bin": {
+    "lookup": "./bin/lookup"
+  },
   "scripts": {
-    "prebuild": "del lib",
+    "prebuild": "del ./lib && prettier --write",
     "build": "tsc",
     "lint": "eslint --fix \"src/**\"",
     "test": "dotenv jest"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/thomasconner/ipdata-js-library.git"
-  },
-  "author": "Thomas Conner <thomas.conner@me.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/thomasconner/ipdata-js-library/issues"
-  },
-  "homepage": "https://github.com/thomasconner/ipdata-js-library#readme",
   "dependencies": {
-    "axios": "^0.19.0",
+    "@types/lru-cache": "^5.1.0",
+    "got": "^11.8.2",
     "is-ip": "^3.1.0",
-    "lodash": "^4.17.15",
     "lru-cache": "^5.1.1",
-    "tslib": "^1.10.0",
-    "url-join": "^4.0.1"
+    "debug": "^4.3.1",
+    "dotenv": "^8.2.0",
+    "tslib": "^1.14.1"
   },
   "devDependencies": {
-    "@types/jest": "^24.0.22",
-    "@types/lodash": "^4.14.144",
-    "@types/lru-cache": "^5.1.0",
-    "@types/node": "^12.12.6",
-    "@types/url-join": "^4.0.0",
-    "@typescript-eslint/eslint-plugin": "^2.6.1",
-    "@typescript-eslint/parser": "^2.6.1",
-    "del-cli": "^3.0.0",
-    "dotenv-cli": "^3.0.0",
-    "eslint": "^6.5.1",
-    "eslint-config-airbnb-base": "^14.0.0",
-    "eslint-plugin-jest": "^23.0.2",
-    "eslint-config-prettier": "^6.4.0",
-    "eslint-plugin-import": "^2.18.2",
-    "eslint-plugin-prettier": "^3.1.1",
+    "@types/jest": "^24.9.1",
+    "@types/debug": "^4.1.5",
+    "@types/node": "^12.20.6",
+    "@typescript-eslint/eslint-plugin": "^2.34.0",
+    "@typescript-eslint/parser": "^2.34.0",
+    "del-cli": "^3.0.1",
+    "dotenv-cli": "^3.2.0",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jest": "^23.20.0",
+    "eslint-plugin-prettier": "^3.3.1",
     "jest": "^24.9.0",
-    "prettier": "^1.18.2",
-    "ts-jest": "^24.1.0",
-    "typescript": "^3.7.2"
-  },
-  "files": [
-    "lib"
-  ]
+    "prettier": "^1.19.1",
+    "ts-jest": "^24.3.0",
+    "typescript": "^3.9.9"
+  }
 }

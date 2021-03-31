@@ -28,3 +28,7 @@ node_modules
 
 # Build directory
 lib
+
+# IDE tools
+.vscode
+.idea
