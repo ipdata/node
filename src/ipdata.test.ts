@@ -208,7 +208,7 @@ describe('bulkLookup()', () => {
       expect(info[IP1]).toHaveProperty(field2, false);
       expect(info[IP1]).toHaveProperty('status');
       expect(info[IP2]).toHaveProperty(field1, IP2);
-      expect(info[IP2]).toHaveProperty(field2, false);
+      expect(info[IP2]).toHaveProperty(field2, true);
       expect(info[IP2]).toHaveProperty('status');
     });
   });
