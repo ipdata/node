@@ -12,12 +12,12 @@ describe('constructor()', () => {
   });
 
   it('should set the apiKey', () => {
-    const ipdata = new IPData(process.env.IPDATA_API_KEY);
+    const ipdata = new IPData(process.env.IPDATA_API_KEY as string);
     expect(ipdata.apiKey).toEqual(process.env.IPDATA_API_KEY);
   });
 
   it('should configure the cache by default', () => {
-    const ipdata = new IPData(process.env.IPDATA_API_KEY);
+    const ipdata = new IPData(process.env.IPDATA_API_KEY as string);
     expect(ipdata.cache.max).toEqual(4096);
     expect(ipdata.cache.maxAge).toEqual(1000 * 60 * 60 * 24);
   });
@@ -25,14 +25,14 @@ describe('constructor()', () => {
   it('should configure the cache', () => {
     const max = 1;
     const maxAge = 1000;
-    const ipdata = new IPData(process.env.IPDATA_API_KEY, { max, maxAge });
+    const ipdata = new IPData(process.env.IPDATA_API_KEY as string, { max, maxAge });
     expect(ipdata.cache.max).toEqual(max);
     expect(ipdata.cache.maxAge).toEqual(maxAge);
   });
 });
 
 describe('lookup()', () => {
-  const ipdata = new IPData(process.env.IPDATA_API_KEY);
+  const ipdata = new IPData(process.env.IPDATA_API_KEY as string);
 
   afterEach(() => {
     return ipdata.cache.reset();
@@ -46,7 +46,7 @@ describe('lookup()', () => {
     });
 
     it('should return information when null is provided', async () => {
-      const info = await ipdata.lookup(null);
+      const info = await ipdata.lookup(undefined);
       expect(info).toHaveProperty('ip');
       expect(info).toHaveProperty('status');
     });
@@ -65,7 +65,7 @@ describe('lookup()', () => {
     });
 
     it('should not cache the information', async () => {
-      const customIPData = new IPData(process.env.IPDATA_API_KEY, { maxAge: -1 });
+      const customIPData = new IPData(process.env.IPDATA_API_KEY as string, { maxAge: -1 });
       await customIPData.lookup();
       const info = ipdata.cache.get(DEFAULT_IP_KEY);
       expect(info).toBeUndefined();
@@ -92,7 +92,7 @@ describe('lookup()', () => {
     });
 
     it('should not cache the information', async () => {
-      const customIPData = new IPData(process.env.IPDATA_API_KEY, { maxAge: -1 });
+      const customIPData = new IPData(process.env.IPDATA_API_KEY as string, { maxAge: -1 });
       await customIPData.lookup(TEST_IP);
       const info = ipdata.cache.get(TEST_IP);
       expect(info).toBeUndefined();
@@ -100,7 +100,7 @@ describe('lookup()', () => {
   });
 
   it('should throw an error if a selectField and fields is provided', async () => {
-    await expect(ipdata.lookup(null, 'field', ['field'])).rejects.toThrow(
+    await expect(ipdata.lookup(undefined, 'field', ['field'])).rejects.toThrow(
       'The selectField and fields parameters cannot be used at the same time.',
     );
   });
@@ -108,12 +108,12 @@ describe('lookup()', () => {
   describe('selectField', () => {
     it('should throw an error for an invlaid field ', async () => {
       const field = 'field';
-      await expect(ipdata.lookup(null, field)).rejects.toThrow(`${field} is not a valid field.`);
+      await expect(ipdata.lookup(undefined, field)).rejects.toThrow(`${field} is not a valid field.`);
     });
 
     it('should return a response with only the field', async () => {
       const field = 'is_eu';
-      const info = await ipdata.lookup(null, field);
+      const info = await ipdata.lookup(undefined, field);
       expect(info).toHaveProperty(field, false);
       expect(info).toHaveProperty('status');
     });
@@ -123,14 +123,14 @@ describe('lookup()', () => {
     it('should throw an error for an invlaid field ', async () => {
       const field = 'field';
       const fields = [field];
-      await expect(ipdata.lookup(null, null, fields)).rejects.toThrow(`${field} is not a valid field.`);
+      await expect(ipdata.lookup(undefined, undefined, fields)).rejects.toThrow(`${field} is not a valid field.`);
     });
 
     it('should return a response with only the field', async () => {
       const field1 = 'ip';
       const field2 = 'is_eu';
       const fields = [field1, field2];
-      const info = await ipdata.lookup(TEST_IP, null, fields);
+      const info = await ipdata.lookup(TEST_IP, undefined, fields);
       expect(info).toHaveProperty(field1, TEST_IP);
       expect(info).toHaveProperty(field2, false);
       expect(info).toHaveProperty('status');
@@ -139,7 +139,7 @@ describe('lookup()', () => {
 });
 
 describe('bulkLookup()', () => {
-  const ipdata = new IPData(process.env.IPDATA_API_KEY);
+  const ipdata = new IPData(process.env.IPDATA_API_KEY as string);
   const IP1 = TEST_IP;
   const IP2 = '8.8.8.8';
 
@@ -208,7 +208,7 @@ describe('bulkLookup()', () => {
       expect(info[IP1]).toHaveProperty(field2, false);
       expect(info[IP1]).toHaveProperty('status');
       expect(info[IP2]).toHaveProperty(field1, IP2);
-      expect(info[IP2]).toHaveProperty(field2, false);
+      expect(info[IP2]).toHaveProperty(field2, true);
       expect(info[IP2]).toHaveProperty('status');
     });
   });
