@@ -168,10 +168,10 @@ export default class IPData {
 
     try {
       const response = await axios.get(url, { params });
-      let data: LookupResponse = { ...response.data, status: response.status };
+      let data = { ...response.data, status: response.status };
 
       if (selectField) {
-        data = { [selectField]: response.data, status: response.status } as LookupResponse;
+        data = { [selectField]: response.data, status: response.status };
       }
 
       this.cache.set(ip || DEFAULT_IP, data);
@@ -179,7 +179,7 @@ export default class IPData {
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
-        return { ...response.data as {}, status: response.status } as LookupResponse;
+        return { ...response.data, status: response.status };
       }
       throw e;
     }
@@ -222,7 +222,7 @@ export default class IPData {
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
-        return [{ ...response.data as {}, status: response.status }] as LookupResponse[];
+        return { ...response.data, status: response.status };
       }
       throw e;
     }
