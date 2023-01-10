@@ -130,8 +130,8 @@ interface IPDataParams {
 }
 
 export default class IPData {
-  apiKey?: string;
-  cache?: LRU<string, LookupResponse>;
+  apiKey: string;
+  cache: LRU<string, LookupResponse>;
 
   constructor(apiKey: string, cacheConfig?: CacheConfig) {
     if (!isString(apiKey)) {

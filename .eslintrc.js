@@ -10,7 +10,9 @@ module.exports = {
     'airbnb-base',
     'plugin:@typescript-eslint/recommended',
     'prettier/@typescript-eslint',
-    'plugin:prettier/recommended'
+    'plugin:prettier/recommended',
+    'plugin:import/recommended',
+    'plugin:import/typescript'
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -20,7 +22,17 @@ module.exports = {
     '@typescript-eslint'
   ],
   rules: {
-    'lines-between-class-members': 'off'
+    'lines-between-class-members': 'off',
+    "import/extensions": [
+      "error",
+      "ignorePackages",
+      {
+        "js": "never",
+        "jsx": "never",
+        "ts": "never",
+        "tsx": "never"
+      }
+   ]
   },
   overrides: [
     {
@@ -42,13 +54,12 @@ module.exports = {
     }
   ],
   settings: {
+    'import/parsers': {
+      "@typescript-eslint/parser": [".ts", ".tsx"]
+    },
     'import/resolver': {
-      node: {
-        extensions: [
-          '.js',
-          '.ts'
-        ]
-      }
+      typescript: true,
+      node: true
     }
   }
 };
