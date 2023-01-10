@@ -130,8 +130,8 @@ interface IPDataParams {
 }
 
 export default class IPData {
-  apiKey?: string;
-  cache?: LRU<string, LookupResponse>;
+  apiKey: string;
+  cache: LRU<string, LookupResponse>;
 
   constructor(apiKey: string, cacheConfig?: CacheConfig) {
     if (!isString(apiKey)) {
@@ -168,10 +168,10 @@ export default class IPData {
 
     try {
       const response = await axios.get(url, { params });
-      let data = { ...response.data, status: response.status };
+      let data: LookupResponse = { ...response.data, status: response.status };
 
       if (selectField) {
-        data = { [selectField]: response.data, status: response.status };
+        data = { [selectField]: response.data, status: response.status } as LookupResponse;
       }
 
       this.cache.set(ip || DEFAULT_IP, data);
@@ -179,7 +179,7 @@ export default class IPData {
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
-        return { ...response.data, status: response.status };
+        return { ...response.data as {}, status: response.status } as LookupResponse;
       }
       throw e;
     }
@@ -222,7 +222,7 @@ export default class IPData {
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
-        return { ...response.data, status: response.status };
+        return [{ ...response.data as {}, status: response.status }] as LookupResponse[];
       }
       throw e;
     }
