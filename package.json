@@ -1,6 +1,6 @@
 {
   "name": "ipdata",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "JavaScript library to gather information for an ip using https://ipdata.co.",
   "main": "./lib/ipdata.js",
   "scripts": {
