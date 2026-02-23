@@ -54,7 +54,7 @@ function isValidFields(fields: string[]): boolean {
     throw new Error('Fields should be an array.');
   }
 
-  fields.forEach(field => {
+  fields.forEach((field) => {
     const index = VALID_FIELDS.indexOf(field);
     if (index === -1) {
       throw new Error(`${field} is not a valid field.`);
@@ -186,11 +186,11 @@ export default class IPData {
     const response = await fetch(url.toString());
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({})) as object;
+      const errorData = (await response.json().catch(() => ({}))) as object;
       return { ...errorData, status: response.status } as LookupResponse;
     }
 
-    const responseData = await response.json() as any;
+    const responseData = (await response.json()) as any;
     let data: LookupResponse;
 
     if (selectField) {
@@ -211,7 +211,7 @@ export default class IPData {
       throw new Error('Bulk Lookup requires more than 1 IP Address in the payload.');
     }
 
-    ips.forEach(ip => {
+    ips.forEach((ip) => {
       if (!isValidIP(ip)) {
         throw new Error(`${ip} is an invalid IP address.`);
       }
@@ -241,12 +241,12 @@ export default class IPData {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})) as object;
+        const errorData = (await response.json().catch(() => ({}))) as object;
         return { ...errorData, status: response.status } as unknown as LookupResponse[];
       }
 
-      const responseData = await response.json() as any[];
-      responseData.forEach(info => {
+      const responseData = (await response.json()) as any[];
+      responseData.forEach((info) => {
         this.cache.set(info.ip, { ...info, status: response.status });
         responses.push(this.cache.get(info.ip)!);
       });

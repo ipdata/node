@@ -26,7 +26,13 @@ const MOCK_IP1_DATA = {
   company: { name: 'Cloudflare, Inc.', domain: 'cloudflare.com', network: '1.1.1.0/24', type: 'hosting' },
   languages: [{ name: 'English', native: 'English', code: 'en' }],
   currency: { name: 'US Dollar', code: 'USD', symbol: '$', native: '$', plural: 'US dollars' },
-  time_zone: { name: 'America/Los_Angeles', abbr: 'PST', offset: '-0800', is_dst: false, current_time: '2024-01-01T00:00:00-08:00' },
+  time_zone: {
+    name: 'America/Los_Angeles',
+    abbr: 'PST',
+    offset: '-0800',
+    is_dst: false,
+    current_time: '2024-01-01T00:00:00-08:00',
+  },
   threat: {
     is_tor: false,
     is_proxy: false,
@@ -85,7 +91,7 @@ describe('constructor()', () => {
 
   it('should configure the cache by default', () => {
     const ipdata = new IPData(TEST_API_KEY);
-    expect(ipdata.cache.max).toEqual(4096);
+    expect(ipdata.cache.max).toBe(4096);
     expect(ipdata.cache.ttl).toEqual(1000 * 60 * 60 * 24);
   });
 
@@ -99,12 +105,12 @@ describe('constructor()', () => {
 
   it('should use the default base URL', () => {
     const ipdata = new IPData(TEST_API_KEY);
-    expect(ipdata.baseUrl).toEqual('https://api.ipdata.co/');
+    expect(ipdata.baseUrl).toBe('https://api.ipdata.co/');
   });
 
   it('should accept a custom base URL', () => {
     const ipdata = new IPData(TEST_API_KEY, undefined, EU_BASE_URL);
-    expect(ipdata.baseUrl).toEqual('https://eu-api.ipdata.co/');
+    expect(ipdata.baseUrl).toBe('https://eu-api.ipdata.co/');
   });
 });
 
@@ -192,7 +198,7 @@ describe('lookup()', () => {
   });
 
   describe('selectField', () => {
-    it('should throw an error for an invlaid field ', async () => {
+    it('should throw an error for an invlaid field', async () => {
       const field = 'field';
       await expect(ipdata.lookup(undefined, field)).rejects.toThrow(`${field} is not a valid field.`);
     });
@@ -207,7 +213,7 @@ describe('lookup()', () => {
   });
 
   describe('fields', () => {
-    it('should throw an error for an invlaid field ', async () => {
+    it('should throw an error for an invlaid field', async () => {
       const field = 'field';
       const fields = [field];
       await expect(ipdata.lookup(undefined, undefined, fields)).rejects.toThrow(`${field} is not a valid field.`);
@@ -227,7 +233,12 @@ describe('lookup()', () => {
 
   describe('company field', () => {
     it('should accept company as a valid select field', async () => {
-      const companyData = { name: 'Cloudflare, Inc.', domain: 'cloudflare.com', network: '1.1.1.0/24', type: 'hosting' };
+      const companyData = {
+        name: 'Cloudflare, Inc.',
+        domain: 'cloudflare.com',
+        network: '1.1.1.0/24',
+        type: 'hosting',
+      };
       mockFetch.mockReturnValueOnce(mockFetchResponse(companyData));
       const info = await ipdata.lookup(TEST_IP, 'company');
       expect(info).toHaveProperty('company');
@@ -308,7 +319,7 @@ describe('bulkLookup()', () => {
     const IP3 = '1.0.0.1';
     mockFetch.mockReturnValueOnce(mockFetchResponse(MOCK_IP1_DATA));
     await ipdata.lookup(IP1);
-    expect(ipdata.cache.get(IP1)).not.toBeUndefined();
+    expect(ipdata.cache.get(IP1)).toBeDefined();
     mockFetch.mockReturnValueOnce(mockFetchResponse([MOCK_IP2_DATA, MOCK_IP3_DATA]));
     const result = await ipdata.bulkLookup([IP1, IP2, IP3]);
     const info = keyBy(result);
@@ -321,7 +332,7 @@ describe('bulkLookup()', () => {
   });
 
   describe('fields', () => {
-    it('should throw an error for an invlaid field ', async () => {
+    it('should throw an error for an invlaid field', async () => {
       const field = 'field';
       const fields = [field];
       await expect(ipdata.bulkLookup([IP1, IP2], fields)).rejects.toThrow(`${field} is not a valid field.`);
@@ -331,10 +342,12 @@ describe('bulkLookup()', () => {
       const field1 = 'ip';
       const field2 = 'is_eu';
       const fields = [field1, field2];
-      mockFetch.mockReturnValueOnce(mockFetchResponse([
-        { ip: IP1, is_eu: false },
-        { ip: IP2, is_eu: true },
-      ]));
+      mockFetch.mockReturnValueOnce(
+        mockFetchResponse([
+          { ip: IP1, is_eu: false },
+          { ip: IP2, is_eu: true },
+        ]),
+      );
       const result = await ipdata.bulkLookup([IP1, IP2], fields);
       const info = keyBy(result);
       expect(info[IP1]).toHaveProperty(field1, IP1);
