@@ -1,13 +1,16 @@
 {
   "name": "ipdata",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "description": "JavaScript library to gather information for an ip using https://ipdata.co.",
   "main": "./lib/ipdata.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "prebuild": "del lib",
     "build": "tsc",
     "lint": "eslint --fix \"src/**\"",
-    "test": "dotenv jest"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -20,21 +23,15 @@
   },
   "homepage": "https://github.com/thomasconner/ipdata-js-library#readme",
   "dependencies": {
-    "axios": "^1.13.5",
-    "is-ip": "^3.1.0",
-    "lodash": "^4.17.23",
     "lru-cache": "^11.2.6",
-    "tslib": "^2.8.1",
-    "url-join": "^4.0.1"
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
-    "@types/lodash": "^4.17.24",
     "@types/node": "^22.0.0",
     "@typescript-eslint/eslint-plugin": "^8.56.0",
     "@typescript-eslint/parser": "^8.56.0",
     "del-cli": "^7.0.0",
-    "dotenv-cli": "^11.0.0",
     "eslint": "^8.57.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^10.1.8",

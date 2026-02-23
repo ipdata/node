@@ -1,8 +1,4 @@
-import isString from 'lodash/isString';
-import isArray from 'lodash/isArray';
-import isIP from 'is-ip';
-import axios, { AxiosError } from 'axios';
-import urljoin from 'url-join';
+import { isIP as netIsIP } from 'net';
 import { LRUCache } from 'lru-cache';
 
 const CACHE_MAX = 4096; // max number of items
@@ -40,7 +36,7 @@ const BASE_URL = 'https://api.ipdata.co/';
 export const EU_BASE_URL = 'https://eu-api.ipdata.co/';
 
 function isValidIP(ip: string): boolean {
-  return ip === DEFAULT_IP || isIP(ip);
+  return ip === DEFAULT_IP || netIsIP(ip) !== 0;
 }
 
 function isValidSelectField(field: string): boolean {
@@ -54,7 +50,7 @@ function isValidSelectField(field: string): boolean {
 }
 
 function isValidFields(fields: string[]): boolean {
-  if (!isArray(fields)) {
+  if (!Array.isArray(fields)) {
     throw new Error('Fields should be an array.');
   }
 
@@ -139,18 +135,13 @@ export interface LookupResponse {
   status: number;
 }
 
-interface IPDataParams {
-  'api-key': string;
-  fields?: string;
-}
-
 export default class IPData {
   apiKey: string;
   baseUrl: string;
   cache: LRUCache<string, LookupResponse>;
 
   constructor(apiKey: string, cacheConfig?: CacheConfig, baseUrl?: string) {
-    if (!isString(apiKey)) {
+    if (typeof apiKey !== 'string') {
       throw new Error('An API key is required.');
     }
 
@@ -159,53 +150,62 @@ export default class IPData {
     this.cache = new LRUCache<string, LookupResponse>({ max: CACHE_MAX, ttl: CACHE_TTL, ...cacheConfig });
   }
 
-  async lookup(ip?: string, selectField?: string, fields?: string[]): Promise<LookupResponse> {
-    const params: IPDataParams = { 'api-key': this.apiKey };
-    let url = ip ? urljoin(this.baseUrl, ip) : this.baseUrl;
+  private buildUrl(...pathSegments: string[]): URL {
+    const base = this.baseUrl.endsWith('/') ? this.baseUrl : `${this.baseUrl}/`;
+    const path = pathSegments.filter(Boolean).join('/');
+    const url = path ? new URL(path, base) : new URL(base);
+    url.searchParams.set('api-key', this.apiKey);
+    return url;
+  }
 
+  async lookup(ip?: string, selectField?: string, fields?: string[]): Promise<LookupResponse> {
     if (ip && !isValidIP(ip)) {
       throw new Error(`${ip} is an invalid IP address.`);
     }
 
     if (this.cache.has(ip || DEFAULT_IP)) {
-      return this.cache.get(ip || DEFAULT_IP);
+      return this.cache.get(ip || DEFAULT_IP)!;
     }
 
     if (selectField && fields) {
       throw new Error('The selectField and fields parameters cannot be used at the same time.');
     }
 
+    let urlPath = ip || '';
+
     if (selectField && isValidSelectField(selectField)) {
-      url = urljoin(url, selectField);
+      urlPath = urlPath ? `${urlPath}/${selectField}` : selectField;
     }
+
+    const url = this.buildUrl(urlPath);
 
     if (fields && isValidFields(fields)) {
-      params.fields = fields.join(',');
+      url.searchParams.set('fields', fields.join(','));
     }
 
-    try {
-      const response = await axios.get(url, { params });
-      let data = { ...response.data, status: response.status };
+    const response = await fetch(url.toString());
 
-      if (selectField) {
-        data = { [selectField]: response.data, status: response.status };
-      }
-
-      this.cache.set(ip || DEFAULT_IP, data);
-      return this.cache.get(ip || DEFAULT_IP);
-    } catch (e) {
-      const { response } = e as AxiosError;
-      if (response) {
-        return { ...(response.data as object), status: response.status } as LookupResponse;
-      }
-      throw e;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({})) as object;
+      return { ...errorData, status: response.status } as LookupResponse;
     }
+
+    const responseData = await response.json() as any;
+    let data: LookupResponse;
+
+    if (selectField) {
+      data = { [selectField]: responseData, status: response.status } as unknown as LookupResponse;
+    } else {
+      data = { ...responseData, status: response.status };
+    }
+
+    this.cache.set(ip || DEFAULT_IP, data);
+    return this.cache.get(ip || DEFAULT_IP)!;
   }
 
   async bulkLookup(ips: string[], fields?: string[]): Promise<LookupResponse[]> {
-    const params: IPDataParams = { 'api-key': this.apiKey };
     const responses: LookupResponse[] = [];
-    const bulk = [];
+    const bulk: string[] = [];
 
     if (ips.length < 2) {
       throw new Error('Bulk Lookup requires more than 1 IP Address in the payload.');
@@ -217,31 +217,41 @@ export default class IPData {
       }
 
       if (this.cache.has(ip)) {
-        responses.push(this.cache.get(ip));
+        responses.push(this.cache.get(ip)!);
       } else {
         bulk.push(ip);
       }
     });
 
     if (fields && isValidFields(fields)) {
-      params.fields = fields.join(',');
+      // validation only — fields are passed as query params below
     }
 
-    try {
-      if (bulk.length > 0) {
-        const response = await axios.post(urljoin(this.baseUrl, 'bulk'), bulk, { params });
-        response.data.forEach(info => {
-          this.cache.set(info.ip, { ...info, status: response.status });
-          responses.push(this.cache.get(info.ip));
-        });
+    if (bulk.length > 0) {
+      const url = this.buildUrl('bulk');
+
+      if (fields) {
+        url.searchParams.set('fields', fields.join(','));
       }
-      return responses;
-    } catch (e) {
-      const { response } = e as AxiosError;
-      if (response) {
-        return { ...(response.data as object), status: response.status } as unknown as LookupResponse[];
+
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bulk),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as object;
+        return { ...errorData, status: response.status } as unknown as LookupResponse[];
       }
-      throw e;
+
+      const responseData = await response.json() as any[];
+      responseData.forEach(info => {
+        this.cache.set(info.ip, { ...info, status: response.status });
+        responses.push(this.cache.get(info.ip)!);
+      });
     }
+
+    return responses;
   }
 }
