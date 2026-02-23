@@ -1,8 +1,10 @@
-# IPData JavaScript Library
+# IPData Node.js Library
 
 [![](https://github.com/ipdata/node/workflows/CI/badge.svg)](https://github.com/ipdata/node/actions)
 
-JavaScript library that can be used in a web browser or Node.js application to gather information for an IP address using https://ipdata.co.
+A Node.js library for the [ipdata](https://ipdata.co) API. Look up IP addresses for geolocation, threat intelligence, company data, and more.
+
+Requires **Node.js 18** or later. Uses the native `fetch` API with zero HTTP dependencies.
 
 **Table of Contents**
 
@@ -14,18 +16,17 @@ JavaScript library that can be used in a web browser or Node.js application to g
   - [Lookup](#lookup)
   - [Bulk Lookup](#bulk-lookup)
 - [Response Fields](#response-fields)
+- [TypeScript](#typescript)
 
 ## Install
 
 ```sh
-$ npm install ipdata
+npm install ipdata
 ```
 
 ## Use
 
-### Import library
-
-Import the library.
+### Import Library
 
 ```js
 import IPData from 'ipdata';
@@ -37,7 +38,7 @@ A named export is also available:
 import { IPData } from 'ipdata';
 ```
 
-If you are using `require()`:
+CommonJS:
 
 ```js
 const { IPData } = require('ipdata');
@@ -45,34 +46,32 @@ const { IPData } = require('ipdata');
 
 ### Create an Instance
 
-Create an instance of the `IPData` class and pass your api key for IPData as the first parameter.
+Create an instance of the `IPData` class with your [API key](https://ipdata.co/).
 
 ```js
 const ipdata = new IPData('<apiKey>');
 ```
 
-The library will cache 4096 ip addresses responses for 24 hours using a LRU cache by default. You can configure the cache by passing an object as the second paramenter.
+#### Caching
+
+The library caches up to 4096 responses for 24 hours using an LRU cache by default. You can configure the cache by passing an options object as the second parameter.
 
 ```js
-const cacheConfig = {
-  max: 1000, // max size
-  ttl: 10 * 60 * 1000, // time-to-live in ms (i.e. 10 minutes)
-};
-const ipdata = new IPData('<apiKey>', cacheConfig);
+const ipdata = new IPData('<apiKey>', {
+  max: 1000, // max number of entries
+  ttl: 10 * 60 * 1000, // 10 minutes
+});
 ```
 
-**Note:** To disable the cache pass `1` as the `ttl` (1ms effectively disables caching).
+To disable caching, set `ttl` to `1`:
 
 ```js
-const cacheConfig = {
-  ttl: 1, // disable the cache
-};
-const ipdata = new IPData('<apiKey>', cacheConfig);
+const ipdata = new IPData('<apiKey>', { ttl: 1 });
 ```
 
 ### EU Endpoint
 
-By default requests are routed to the global endpoint (`https://api.ipdata.co`). To ensure end user data stays in the EU, pass the EU endpoint as the third parameter.
+By default requests are routed to the global endpoint (`https://api.ipdata.co`). To ensure end-user data stays in the EU, pass the EU endpoint as the third parameter.
 
 ```js
 import IPData, { EU_BASE_URL } from 'ipdata';
@@ -80,7 +79,7 @@ import IPData, { EU_BASE_URL } from 'ipdata';
 const ipdata = new IPData('<apiKey>', undefined, EU_BASE_URL);
 ```
 
-You can also pass a custom base URL if needed.
+You can also pass any custom base URL:
 
 ```js
 const ipdata = new IPData('<apiKey>', undefined, 'https://eu-api.ipdata.co/');
@@ -88,97 +87,77 @@ const ipdata = new IPData('<apiKey>', undefined, 'https://eu-api.ipdata.co/');
 
 ### Lookup
 
-The `lookup()` method accepts either positional arguments or a single named-params object.
-
-The library will lookup the ip address of the host computer if no ip address is provided.
+Look up the current machine's IP when called with no arguments:
 
 ```js
-ipdata.lookup()
-  .then(function(info) {
-    // info.ip === '<hostcomputerip>'
-    // ...
-  });
+const info = await ipdata.lookup();
+// info.ip === '<your ip>'
 ```
 
-You can pass an ip address to lookup information about it.
+Pass an IP address to look it up:
 
 ```js
-ipdata.lookup('1.1.1.1')
-  .then(function(info) {
-    // info.ip === '1.1.1.1'
-    // ...
-  });
+const info = await ipdata.lookup('1.1.1.1');
+// info.ip === '1.1.1.1'
 ```
 
-You can specify a single field to be returned.
+Return a single field:
 
 ```js
-ipdata.lookup('1.1.1.1', 'ip')
-  .then(function(info) {
-    // info.ip === '1.1.1.1'
-    // ...
-  });
+const info = await ipdata.lookup('1.1.1.1', 'city');
 ```
 
-You can specify multiple fields to be returned.
+Return multiple fields:
 
 ```js
-ipdata.lookup('1.1.1.1', undefined, ['ip', 'city'])
-  .then(function(info) {
-    // ...
-  });
+const info = await ipdata.lookup('1.1.1.1', undefined, ['ip', 'city']);
 ```
 
 #### Named Parameters
 
-You can also pass a single object, which is especially convenient when you only need `fields` or `selectField` without specifying an IP.
+You can also pass a single object, which is convenient when you only need `fields` or `selectField` without specifying an IP.
 
 ```js
-// Lookup your own IP with specific fields
-ipdata.lookup({ fields: ['ip', 'city'] })
-  .then(function(info) {
-    // ...
-  });
+// Look up your own IP with specific fields
+const info = await ipdata.lookup({ fields: ['ip', 'city'] });
 
-// Lookup a specific IP with a select field
-ipdata.lookup({ ip: '1.1.1.1', selectField: 'city' })
-  .then(function(info) {
-    // ...
-  });
+// Look up a specific IP with a single field
+const info = await ipdata.lookup({ ip: '1.1.1.1', selectField: 'city' });
 ```
 
 ### Bulk Lookup
 
-You can lookup multiple ip addresses with one API call using the `bulkLookup()` method.
+Look up multiple IP addresses in a single API call:
 
 ```js
-const ips = ['1.1.1.1', '1.0.0.1'];
-ipdata.bulkLookup(ips)
-  .then(function(info) {
-    // info[0].ip === 1.1.1.1
-    // ...
-  });
+const info = await ipdata.bulkLookup(['1.1.1.1', '1.0.0.1']);
+// info[0].ip === '1.1.1.1'
 ```
 
-You can specify only certain fields to be returned when looking up multiple ip addresses by passing an array of fields as the second parameter to the `bulkLookup()` method.
+With field filtering:
 
 ```js
-const ips = ['1.1.1.1', '1.0.0.1'];
-const fields = ['ip', 'city'];
-ipdata.bulkLookup(ips, fields)
-  .then(function(info) {
-    // ...
-  });
+const info = await ipdata.bulkLookup(['1.1.1.1', '1.0.0.1'], ['ip', 'city']);
 ```
 
 ## Response Fields
 
-The following fields are available for use with `selectField` and `fields` parameters:
+The following fields are available for use with `selectField` and `fields`:
 
 `ip`, `is_eu`, `city`, `region`, `region_code`, `country_name`, `country_code`, `continent_name`, `continent_code`, `latitude`, `longitude`, `asn`, `company`, `organisation`, `postal`, `calling_code`, `flag`, `emoji_flag`, `emoji_unicode`, `carrier`, `languages`, `currency`, `time_zone`, `threat`, `count`
 
-The `company` field returns an object with `name`, `domain`, `network`, and `type` properties.
+**`asn`** — `{ asn, name, domain, route, type }`
 
-The `carrier` field returns an object with `name`, `mcc`, and `mnc` properties.
+**`company`** — `{ name, domain, network, type }`
 
-The `threat` field returns an object with `is_tor`, `is_icloud_relay`, `is_proxy`, `is_datacenter`, `is_anonymous`, `is_known_attacker`, `is_known_abuser`, `is_threat`, `is_bogon`, and `blocklists` properties.
+**`carrier`** — `{ name, mcc, mnc }`
+
+**`threat`** — `{ is_tor, is_icloud_relay, is_proxy, is_datacenter, is_anonymous, is_known_attacker, is_known_abuser, is_threat, is_bogon, blocklists }`
+
+## TypeScript
+
+The library is written in TypeScript and exports the following types:
+
+```ts
+import IPData, { EU_BASE_URL, CacheConfig, LookupParams, LookupResponse } from 'ipdata';
+```
