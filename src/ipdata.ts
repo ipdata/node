@@ -135,7 +135,7 @@ export interface LookupResponse {
   status: number;
 }
 
-export default class IPData {
+export class IPData {
   apiKey: string;
   baseUrl: string;
   cache: LRUCache<string, LookupResponse>;
@@ -255,3 +255,5 @@ export default class IPData {
     return responses;
   }
 }
+
+export default IPData;
