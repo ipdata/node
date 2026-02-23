@@ -1,6 +1,6 @@
 # IPData JavaScript Library
 
-[![](https://github.com/ConnerTechnology/ipdata-js-library/workflows/CI/badge.svg)](https://github.com/ConnerTechnology/ipdata-js-library/actions)
+[![](https://github.com/ipdata/node/workflows/CI/badge.svg)](https://github.com/ipdata/node/actions)
 
 JavaScript library that can be used in a web browser or Node.js application to gather information for an IP address using https://ipdata.co.
 
@@ -10,8 +10,10 @@ JavaScript library that can be used in a web browser or Node.js application to g
 - [Use](#use)
   - [Import Library](#import-library)
   - [Create an Instance](#create-an-instance)
+  - [EU Endpoint](#eu-endpoint)
   - [Lookup](#lookup)
   - [Bulk Lookup](#bulk-lookup)
+- [Response Fields](#response-fields)
 
 ## Install
 
@@ -48,18 +50,34 @@ The library will cache 4096 ip addresses responses for 24 hours using a LRU cach
 ```js
 const cacheConfig = {
   max: 1000, // max size
-  maxAge: 10 * 60 * 1000, // max age in ms (i.e. 10 minutes)
+  ttl: 10 * 60 * 1000, // time-to-live in ms (i.e. 10 minutes)
 };
 const ipdata = new IPData('<apiKey>', cacheConfig);
 ```
 
-**Note:** To disable the cache pass `-1` as the `maxAge`.
+**Note:** To disable the cache pass `1` as the `ttl` (1ms effectively disables caching).
 
 ```js
 const cacheConfig = {
-  maxAge: -1, // disable the cache
+  ttl: 1, // disable the cache
 };
 const ipdata = new IPData('<apiKey>', cacheConfig);
+```
+
+### EU Endpoint
+
+By default requests are routed to the global endpoint (`https://api.ipdata.co`). To ensure end user data stays in the EU, pass the EU endpoint as the third parameter.
+
+```js
+import IPData, { EU_BASE_URL } from 'ipdata';
+
+const ipdata = new IPData('<apiKey>', undefined, EU_BASE_URL);
+```
+
+You can also pass a custom base URL if needed.
+
+```js
+const ipdata = new IPData('<apiKey>', undefined, 'https://eu-api.ipdata.co/');
 ```
 
 ### Lookup
@@ -131,3 +149,15 @@ ipdata.bulkLookup(ips, fields)
     // ...
   });
 ```
+
+## Response Fields
+
+The following fields are available for use with `selectField` and `fields` parameters:
+
+`ip`, `is_eu`, `city`, `region`, `region_code`, `country_name`, `country_code`, `continent_name`, `continent_code`, `latitude`, `longitude`, `asn`, `company`, `organisation`, `postal`, `calling_code`, `flag`, `emoji_flag`, `emoji_unicode`, `carrier`, `languages`, `currency`, `time_zone`, `threat`, `count`
+
+The `company` field returns an object with `name`, `domain`, `network`, and `type` properties.
+
+The `carrier` field returns an object with `name`, `mcc`, and `mnc` properties.
+
+The `threat` field returns an object with `is_tor`, `is_icloud_relay`, `is_proxy`, `is_datacenter`, `is_anonymous`, `is_known_attacker`, `is_known_abuser`, `is_threat`, `is_bogon`, and `blocklists` properties.
