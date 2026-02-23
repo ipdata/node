@@ -261,6 +261,43 @@ describe('lookup()', () => {
     });
   });
 
+  describe('named params', () => {
+    it('should return information with no params', async () => {
+      mockFetch.mockReturnValueOnce(mockFetchResponse(MOCK_DEFAULT_IP_DATA));
+      const info = await ipdata.lookup({});
+      expect(info).toHaveProperty('ip');
+      expect(info).toHaveProperty('status');
+    });
+
+    it('should return information with ip param', async () => {
+      mockFetch.mockReturnValueOnce(mockFetchResponse(MOCK_IP1_DATA));
+      const info = await ipdata.lookup({ ip: TEST_IP });
+      expect(info).toHaveProperty('ip', TEST_IP);
+      expect(info).toHaveProperty('status');
+    });
+
+    it('should return a selectField response', async () => {
+      mockFetch.mockReturnValueOnce(mockFetchResponse(false));
+      const info = await ipdata.lookup({ selectField: 'is_eu' });
+      expect(info).toHaveProperty('is_eu', false);
+      expect(info).toHaveProperty('status');
+    });
+
+    it('should return a fields response', async () => {
+      mockFetch.mockReturnValueOnce(mockFetchResponse({ ip: TEST_IP, is_eu: false }));
+      const info = await ipdata.lookup({ ip: TEST_IP, fields: ['ip', 'is_eu'] });
+      expect(info).toHaveProperty('ip', TEST_IP);
+      expect(info).toHaveProperty('is_eu', false);
+      expect(info).toHaveProperty('status');
+    });
+
+    it('should throw if selectField and fields are both provided', async () => {
+      await expect(ipdata.lookup({ selectField: 'ip', fields: ['ip'] })).rejects.toThrow(
+        'The selectField and fields parameters cannot be used at the same time.',
+      );
+    });
+  });
+
   describe('new API fields', () => {
     it('should return threat object with new fields', async () => {
       mockFetch.mockReturnValueOnce(mockFetchResponse(MOCK_IP1_DATA));

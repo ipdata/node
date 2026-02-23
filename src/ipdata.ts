@@ -69,6 +69,12 @@ export interface CacheConfig {
   ttl?: number;
 }
 
+export interface LookupParams {
+  ip?: string;
+  selectField?: string;
+  fields?: string[];
+}
+
 export interface LookupResponse {
   ip: string;
   is_eu: boolean;
@@ -158,7 +164,28 @@ export class IPData {
     return url;
   }
 
-  async lookup(ip?: string, selectField?: string, fields?: string[]): Promise<LookupResponse> {
+  async lookup(params: LookupParams): Promise<LookupResponse>;
+  async lookup(ip?: string, selectField?: string, fields?: string[]): Promise<LookupResponse>;
+  async lookup(
+    ipOrParams?: string | LookupParams,
+    positionalSelectField?: string,
+    positionalFields?: string[],
+  ): Promise<LookupResponse> {
+    let ip: string | undefined;
+    let selectField: string | undefined;
+    let fields: string[] | undefined;
+
+    if (typeof ipOrParams === 'object' && ipOrParams !== null) {
+      ({ ip, selectField, fields } = ipOrParams);
+    } else if (typeof ipOrParams === 'string') {
+      ip = ipOrParams;
+      selectField = positionalSelectField;
+      fields = positionalFields;
+    } else {
+      selectField = positionalSelectField;
+      fields = positionalFields;
+    }
+
     if (ip && !isValidIP(ip)) {
       throw new Error(`${ip} is an invalid IP address.`);
     }
