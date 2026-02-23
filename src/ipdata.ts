@@ -37,6 +37,7 @@ const VALID_FIELDS = [
   'status',
 ];
 const BASE_URL = 'https://api.ipdata.co/';
+export const EU_BASE_URL = 'https://eu-api.ipdata.co/';
 
 function isValidIP(ip: string): boolean {
   return ip === DEFAULT_IP || isIP(ip);
@@ -146,20 +147,22 @@ interface IPDataParams {
 
 export default class IPData {
   apiKey: string;
+  baseUrl: string;
   cache: LRU<string, LookupResponse>;
 
-  constructor(apiKey: string, cacheConfig?: CacheConfig) {
+  constructor(apiKey: string, cacheConfig?: CacheConfig, baseUrl?: string) {
     if (!isString(apiKey)) {
       throw new Error('An API key is required.');
     }
 
     this.apiKey = apiKey;
+    this.baseUrl = baseUrl || BASE_URL;
     this.cache = new LRU<string, LookupResponse>({ max: CACHE_MAX, maxAge: CACHE_MAX_AGE, ...cacheConfig });
   }
 
   async lookup(ip?: string, selectField?: string, fields?: string[]): Promise<LookupResponse> {
     const params: IPDataParams = { 'api-key': this.apiKey };
-    let url = ip ? urljoin(BASE_URL, ip) : BASE_URL;
+    let url = ip ? urljoin(this.baseUrl, ip) : this.baseUrl;
 
     if (ip && !isValidIP(ip)) {
       throw new Error(`${ip} is an invalid IP address.`);
@@ -227,7 +230,7 @@ export default class IPData {
 
     try {
       if (bulk.length > 0) {
-        const response = await axios.post(urljoin(BASE_URL, 'bulk'), bulk, { params });
+        const response = await axios.post(urljoin(this.baseUrl, 'bulk'), bulk, { params });
         response.data.forEach(info => {
           this.cache.set(info.ip, { ...info, status: response.status });
           responses.push(this.cache.get(info.ip));

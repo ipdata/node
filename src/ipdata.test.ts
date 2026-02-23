@@ -1,5 +1,5 @@
 import keyBy from 'lodash/keyBy';
-import IPData from './ipdata';
+import IPData, { EU_BASE_URL } from './ipdata';
 
 const TEST_IP = '1.1.1.1';
 const DEFAULT_IP_KEY = 'DEFAULT_IP';
@@ -28,6 +28,16 @@ describe('constructor()', () => {
     const ipdata = new IPData(process.env.IPDATA_API_KEY as string, { max, maxAge });
     expect(ipdata.cache.max).toEqual(max);
     expect(ipdata.cache.maxAge).toEqual(maxAge);
+  });
+
+  it('should use the default base URL', () => {
+    const ipdata = new IPData(process.env.IPDATA_API_KEY as string);
+    expect(ipdata.baseUrl).toEqual('https://api.ipdata.co/');
+  });
+
+  it('should accept a custom base URL', () => {
+    const ipdata = new IPData(process.env.IPDATA_API_KEY as string, undefined, EU_BASE_URL);
+    expect(ipdata.baseUrl).toEqual('https://eu-api.ipdata.co/');
   });
 });
 
