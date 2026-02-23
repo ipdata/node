@@ -3,10 +3,10 @@ import isArray from 'lodash/isArray';
 import isIP from 'is-ip';
 import axios, { AxiosError } from 'axios';
 import urljoin from 'url-join';
-import LRU from 'lru-cache';
+import { LRUCache } from 'lru-cache';
 
 const CACHE_MAX = 4096; // max number of items
-const CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
+const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
 const DEFAULT_IP = 'DEFAULT_IP';
 const VALID_FIELDS = [
   'ip',
@@ -70,7 +70,7 @@ function isValidFields(fields: string[]): boolean {
 
 export interface CacheConfig {
   max?: number;
-  maxAge?: number;
+  ttl?: number;
 }
 
 export interface LookupResponse {
@@ -139,7 +139,6 @@ export interface LookupResponse {
   status: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/interface-name-prefix
 interface IPDataParams {
   'api-key': string;
   fields?: string;
@@ -148,7 +147,7 @@ interface IPDataParams {
 export default class IPData {
   apiKey: string;
   baseUrl: string;
-  cache: LRU<string, LookupResponse>;
+  cache: LRUCache<string, LookupResponse>;
 
   constructor(apiKey: string, cacheConfig?: CacheConfig, baseUrl?: string) {
     if (!isString(apiKey)) {
@@ -157,7 +156,7 @@ export default class IPData {
 
     this.apiKey = apiKey;
     this.baseUrl = baseUrl || BASE_URL;
-    this.cache = new LRU<string, LookupResponse>({ max: CACHE_MAX, maxAge: CACHE_MAX_AGE, ...cacheConfig });
+    this.cache = new LRUCache<string, LookupResponse>({ max: CACHE_MAX, ttl: CACHE_TTL, ...cacheConfig });
   }
 
   async lookup(ip?: string, selectField?: string, fields?: string[]): Promise<LookupResponse> {
@@ -197,7 +196,7 @@ export default class IPData {
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
-        return { ...response.data, status: response.status };
+        return { ...(response.data as object), status: response.status } as LookupResponse;
       }
       throw e;
     }
@@ -240,7 +239,7 @@ export default class IPData {
     } catch (e) {
       const { response } = e as AxiosError;
       if (response) {
-        return { ...response.data, status: response.status };
+        return { ...(response.data as object), status: response.status } as unknown as LookupResponse[];
       }
       throw e;
     }

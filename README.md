@@ -50,16 +50,16 @@ The library will cache 4096 ip addresses responses for 24 hours using a LRU cach
 ```js
 const cacheConfig = {
   max: 1000, // max size
-  maxAge: 10 * 60 * 1000, // max age in ms (i.e. 10 minutes)
+  ttl: 10 * 60 * 1000, // time-to-live in ms (i.e. 10 minutes)
 };
 const ipdata = new IPData('<apiKey>', cacheConfig);
 ```
 
-**Note:** To disable the cache pass `-1` as the `maxAge`.
+**Note:** To disable the cache pass `1` as the `ttl` (1ms effectively disables caching).
 
 ```js
 const cacheConfig = {
-  maxAge: -1, // disable the cache
+  ttl: 1, // disable the cache
 };
 const ipdata = new IPData('<apiKey>', cacheConfig);
 ```

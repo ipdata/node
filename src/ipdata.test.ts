@@ -6,7 +6,7 @@ const DEFAULT_IP_KEY = 'DEFAULT_IP';
 
 describe('constructor()', () => {
   it('should throw an error if an apiKey is not provided', () => {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(() => new IPData()).toThrow('An API key is required.');
   });
@@ -19,15 +19,15 @@ describe('constructor()', () => {
   it('should configure the cache by default', () => {
     const ipdata = new IPData(process.env.IPDATA_API_KEY as string);
     expect(ipdata.cache.max).toEqual(4096);
-    expect(ipdata.cache.maxAge).toEqual(1000 * 60 * 60 * 24);
+    expect(ipdata.cache.ttl).toEqual(1000 * 60 * 60 * 24);
   });
 
   it('should configure the cache', () => {
     const max = 1;
-    const maxAge = 1000;
-    const ipdata = new IPData(process.env.IPDATA_API_KEY as string, { max, maxAge });
+    const ttl = 1000;
+    const ipdata = new IPData(process.env.IPDATA_API_KEY as string, { max, ttl });
     expect(ipdata.cache.max).toEqual(max);
-    expect(ipdata.cache.maxAge).toEqual(maxAge);
+    expect(ipdata.cache.ttl).toEqual(ttl);
   });
 
   it('should use the default base URL', () => {
@@ -45,7 +45,7 @@ describe('lookup()', () => {
   const ipdata = new IPData(process.env.IPDATA_API_KEY as string);
 
   afterEach(() => {
-    return ipdata.cache.reset();
+    return ipdata.cache.clear();
   });
 
   describe('default IP address', () => {
@@ -75,7 +75,7 @@ describe('lookup()', () => {
     });
 
     it('should not cache the information', async () => {
-      const customIPData = new IPData(process.env.IPDATA_API_KEY as string, { maxAge: -1 });
+      const customIPData = new IPData(process.env.IPDATA_API_KEY as string, { ttl: 1 });
       await customIPData.lookup();
       const info = ipdata.cache.get(DEFAULT_IP_KEY);
       expect(info).toBeUndefined();
@@ -102,7 +102,7 @@ describe('lookup()', () => {
     });
 
     it('should not cache the information', async () => {
-      const customIPData = new IPData(process.env.IPDATA_API_KEY as string, { maxAge: -1 });
+      const customIPData = new IPData(process.env.IPDATA_API_KEY as string, { ttl: 1 });
       await customIPData.lookup(TEST_IP);
       const info = ipdata.cache.get(TEST_IP);
       expect(info).toBeUndefined();
@@ -185,7 +185,7 @@ describe('bulkLookup()', () => {
   const IP2 = '8.8.8.8';
 
   afterEach(() => {
-    return ipdata.cache.reset();
+    return ipdata.cache.clear();
   });
 
   it('should throw an error if less than 2 ip addresses are provided', async () => {
