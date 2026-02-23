@@ -136,6 +136,37 @@ describe('lookup()', () => {
       expect(info).toHaveProperty('status');
     });
   });
+
+  describe('company field', () => {
+    it('should accept company as a valid select field', async () => {
+      const info = await ipdata.lookup(TEST_IP, 'company');
+      expect(info).toHaveProperty('company');
+      expect(info).toHaveProperty('status');
+    });
+
+    it('should accept company in fields array', async () => {
+      const fields = ['ip', 'company'];
+      const info = await ipdata.lookup(TEST_IP, undefined, fields);
+      expect(info).toHaveProperty('ip', TEST_IP);
+      expect(info).toHaveProperty('status');
+    });
+  });
+
+  describe('new API fields', () => {
+    it('should return threat object with new fields', async () => {
+      const info = await ipdata.lookup(TEST_IP);
+      expect(info).toHaveProperty('threat');
+      expect(info.threat).toHaveProperty('is_icloud_relay');
+      expect(info.threat).toHaveProperty('is_datacenter');
+      expect(info.threat).toHaveProperty('blocklists');
+    });
+
+    it('should return languages with code field', async () => {
+      const info = await ipdata.lookup(TEST_IP);
+      expect(info.languages.length).toBeGreaterThan(0);
+      expect(info.languages[0]).toHaveProperty('code');
+    });
+  });
 });
 
 describe('bulkLookup()', () => {

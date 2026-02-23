@@ -21,6 +21,7 @@ const VALID_FIELDS = [
   'latitude',
   'longitude',
   'asn',
+  'company',
   'organisation',
   'postal',
   'calling_code',
@@ -88,6 +89,11 @@ export interface LookupResponse {
   flag: string;
   emoji_flag: string;
   emoji_unicode: string;
+  carrier?: {
+    name: string;
+    mcc: string;
+    mnc: string;
+  };
   asn: {
     asn: string;
     name: string;
@@ -95,7 +101,13 @@ export interface LookupResponse {
     route: string;
     type: string;
   };
-  languages: { name: string; native: string }[];
+  company?: {
+    name: string;
+    domain: string;
+    network: string;
+    type: string;
+  };
+  languages: { name: string; native: string; code?: string }[];
   currency: {
     name: string;
     code: string;
@@ -118,6 +130,9 @@ export interface LookupResponse {
     is_known_abuser: boolean;
     is_threat: boolean;
     is_bogon: boolean;
+    is_icloud_relay?: boolean;
+    is_datacenter?: boolean;
+    blocklists?: { name: string; site: string; type: string }[];
   };
   count: number;
   status: number;
