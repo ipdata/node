@@ -190,13 +190,13 @@ export default class IPData {
       return { ...errorData, status: response.status } as LookupResponse;
     }
 
-    const responseData = (await response.json()) as any;
+    const responseData: unknown = await response.json();
     let data: LookupResponse;
 
     if (selectField) {
       data = { [selectField]: responseData, status: response.status } as unknown as LookupResponse;
     } else {
-      data = { ...responseData, status: response.status };
+      data = { ...(responseData as Record<string, unknown>), status: response.status } as LookupResponse;
     }
 
     this.cache.set(ip || DEFAULT_IP, data);
@@ -245,7 +245,7 @@ export default class IPData {
         return { ...errorData, status: response.status } as unknown as LookupResponse[];
       }
 
-      const responseData = (await response.json()) as any[];
+      const responseData = (await response.json()) as LookupResponse[];
       responseData.forEach((info) => {
         this.cache.set(info.ip, { ...info, status: response.status });
         responses.push(this.cache.get(info.ip)!);

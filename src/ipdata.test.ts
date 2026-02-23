@@ -66,7 +66,7 @@ const MOCK_DEFAULT_IP_DATA = {
   ip: '203.0.113.1',
 };
 
-function mockFetchResponse(data: any, status = 200) {
+function mockFetchResponse(data: unknown, status = 200) {
   return Promise.resolve({
     ok: status >= 200 && status < 300,
     status,
@@ -76,6 +76,13 @@ function mockFetchResponse(data: any, status = 200) {
 
 const mockFetch = jest.fn() as jest.Mock;
 global.fetch = mockFetch;
+
+function keyBy(items: LookupResponse[]): Record<string, LookupResponse> {
+  return items.reduce<Record<string, LookupResponse>>((acc, item) => {
+    acc[item.ip] = item;
+    return acc;
+  }, {});
+}
 
 describe('constructor()', () => {
   it('should throw an error if an apiKey is not provided', () => {
@@ -359,11 +366,3 @@ describe('bulkLookup()', () => {
     });
   });
 });
-
-function keyBy(items: LookupResponse[]): Record<string, LookupResponse> {
-  const result: Record<string, LookupResponse> = {};
-  for (const item of items) {
-    result[item.ip] = item;
-  }
-  return result;
-}

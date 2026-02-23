@@ -1,6 +1,6 @@
 # IPData JavaScript Library
 
-[![](https://github.com/ConnerTechnology/ipdata-js-library/workflows/CI/badge.svg)](https://github.com/ConnerTechnology/ipdata-js-library/actions)
+[![](https://github.com/thomasconner/ipdata-js-library/workflows/CI/badge.svg)](https://github.com/thomasconner/ipdata-js-library/actions)
 
 JavaScript library that can be used in a web browser or Node.js application to gather information for an IP address using https://ipdata.co.
 
@@ -154,7 +154,7 @@ ipdata.bulkLookup(ips, fields)
 
 The following fields are available for use with `selectField` and `fields` parameters:
 
-`ip`, `is_eu`, `city`, `region`, `region_code`, `country_name`, `country_code`, `continent_name`, `continent_code`, `latitude`, `longitude`, `asn`, `company`, `postal`, `calling_code`, `flag`, `emoji_flag`, `emoji_unicode`, `carrier`, `languages`, `currency`, `time_zone`, `threat`, `count`
+`ip`, `is_eu`, `city`, `region`, `region_code`, `country_name`, `country_code`, `continent_name`, `continent_code`, `latitude`, `longitude`, `asn`, `company`, `organisation`, `postal`, `calling_code`, `flag`, `emoji_flag`, `emoji_unicode`, `carrier`, `languages`, `currency`, `time_zone`, `threat`, `count`
 
 The `company` field returns an object with `name`, `domain`, `network`, and `type` properties.
 
