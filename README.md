@@ -1,6 +1,6 @@
 # IPData JavaScript Library
 
-[![](https://github.com/thomasconner/ipdata-js-library/workflows/CI/badge.svg)](https://github.com/thomasconner/ipdata-js-library/actions)
+[![](https://github.com/ipdata/node/workflows/CI/badge.svg)](https://github.com/ipdata/node/actions)
 
 JavaScript library that can be used in a web browser or Node.js application to gather information for an IP address using https://ipdata.co.
 

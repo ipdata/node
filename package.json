@@ -14,14 +14,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/thomasconner/ipdata-js-library.git"
+    "url": "git+https://github.com/ipdata/node.git"
   },
   "author": "Thomas Conner <thomas.conner@me.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/thomasconner/ipdata-js-library/issues"
+    "url": "https://github.com/ipdata/node/issues"
   },
-  "homepage": "https://github.com/thomasconner/ipdata-js-library#readme",
+  "homepage": "https://github.com/ipdata/node#readme",
   "dependencies": {
     "lru-cache": "^11.2.6",
     "tslib": "^2.8.1"
