@@ -31,10 +31,16 @@ Import the library.
 import IPData from 'ipdata';
 ```
 
-**Note:** If you are using `require()` then you will need to use the default value exported from the library.
+A named export is also available:
 
 ```js
-const IPData = require('ipdata').default;
+import { IPData } from 'ipdata';
+```
+
+If you are using `require()`:
+
+```js
+const { IPData } = require('ipdata');
 ```
 
 ### Create an Instance
@@ -82,6 +88,8 @@ const ipdata = new IPData('<apiKey>', undefined, 'https://eu-api.ipdata.co/');
 
 ### Lookup
 
+The `lookup()` method accepts either positional arguments or a single named-params object.
+
 The library will lookup the ip address of the host computer if no ip address is provided.
 
 ```js
@@ -92,35 +100,48 @@ ipdata.lookup()
   });
 ```
 
-You can pass an ip address as the first parameter to the `lookup()` method to lookup information about the ip address using IPData.
+You can pass an ip address to lookup information about it.
 
 ```js
-const ip = '1.1.1.1';
-ipdata.lookup(ip)
+ipdata.lookup('1.1.1.1')
   .then(function(info) {
-    // info.ip === 1.1.1.1
+    // info.ip === '1.1.1.1'
     // ...
   });
 ```
 
-You can specify only a select field to be returned when looking up an ip address by passing a field as the second parameter to the `lookup()` method.
+You can specify a single field to be returned.
 
 ```js
-const ip = '1.1.1.1';
-const selectField = 'ip';
-ipdata.lookup(ip, selectField)
+ipdata.lookup('1.1.1.1', 'ip')
   .then(function(info) {
-    // info.select_field === 1.1.1.1
+    // info.ip === '1.1.1.1'
     // ...
   });
 ```
 
-You can specify only certain fields to be returned when looking up an ip address by passing an array of fields as the third parameter to the `lookup()` method.
+You can specify multiple fields to be returned.
 
 ```js
-const ip = '1.1.1.1';
-const fields = ['ip', 'city'];
-ipdata.lookup(ip, null, fields)
+ipdata.lookup('1.1.1.1', undefined, ['ip', 'city'])
+  .then(function(info) {
+    // ...
+  });
+```
+
+#### Named Parameters
+
+You can also pass a single object, which is especially convenient when you only need `fields` or `selectField` without specifying an IP.
+
+```js
+// Lookup your own IP with specific fields
+ipdata.lookup({ fields: ['ip', 'city'] })
+  .then(function(info) {
+    // ...
+  });
+
+// Lookup a specific IP with a select field
+ipdata.lookup({ ip: '1.1.1.1', selectField: 'city' })
   .then(function(info) {
     // ...
   });
