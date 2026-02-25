@@ -3,6 +3,7 @@
   "version": "3.0.0",
   "description": "JavaScript library to gather information for an ip using https://ipdata.co.",
   "main": "./lib/ipdata.js",
+  "types": "./lib/ipdata.d.ts",
   "engines": {
     "node": ">=18"
   },
