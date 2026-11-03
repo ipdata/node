@@ -168,14 +168,14 @@ const ipdata = new IPData('<apiKey>', undefined, undefined, {
 });
 ```
 
-Use `dispatcher` to send requests through your own [undici dispatcher](https://undici.nodejs.org/#/docs/api/Dispatcher), for example to reach the API through a proxy or to intercept requests in tests. `http2` and `keepAliveTimeout` only apply to the pool the library creates itself.
+Use `dispatcher` to send requests through your own [undici dispatcher](https://undici.nodejs.org/#/docs/api/Dispatcher), for example to reach the API through a proxy or to intercept requests in tests. `http2` and `keepAliveTimeout` only apply to the pool the library creates itself: a dispatcher you inject negotiates HTTP/2 only if it is configured to. For undici's `ProxyAgent` and `EnvHttpProxyAgent` that means `allowH2: true` together with `requestTls: { allowH2: true }`, because the protocols offered on the TLS connection tunnelled through the proxy come from `requestTls`.
 
 ```js
 import { EnvHttpProxyAgent, MockAgent, ProxyAgent } from 'undici';
 
-// Explicit proxy
+// Explicit proxy, negotiating HTTP/2 with the API through the tunnel
 const ipdata = new IPData('<apiKey>', undefined, undefined, {
-  dispatcher: new ProxyAgent('http://proxy.example.com:8080'),
+  dispatcher: new ProxyAgent({ uri: 'http://proxy.example.com:8080', allowH2: true, requestTls: { allowH2: true } }),
 });
 
 // HTTP_PROXY, HTTPS_PROXY and NO_PROXY from the environment
