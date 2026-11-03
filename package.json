@@ -10,7 +10,8 @@
   "scripts": {
     "prebuild": "del lib",
     "build": "tsc",
-    "lint": "eslint --fix \"src/**\"",
+    "lint": "eslint \"src/**\"",
+    "lint:fix": "eslint --fix \"src/**\"",
     "test": "jest"
   },
   "repository": {

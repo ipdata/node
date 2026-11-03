@@ -4,6 +4,9 @@ import { once } from 'events';
 import { Agent, MockAgent, errors } from 'undici';
 import IPData, { EU_BASE_URL, LookupResponse } from './ipdata';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { version: packageVersion }: { version: string } = require('../package.json');
+
 const TEST_API_KEY = 'test-api-key';
 const TEST_IP = '1.1.1.1';
 const DEFAULT_IP_KEY = 'DEFAULT_IP';
@@ -50,7 +53,7 @@ const MOCK_IP1_DATA = {
     is_datacenter: true,
     blocklists: [],
   },
-  count: 0,
+  count: '0',
 };
 
 const MOCK_IP2_DATA = {
@@ -273,6 +276,13 @@ function keyBy(items: LookupResponse[]): Record<string, LookupResponse> {
     acc[item.ip] = item;
     return acc;
   }, {});
+}
+
+// Waits long enough for an entry stored with ttl: 1 to expire.
+function waitForTtlExpiry(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 5);
+  });
 }
 
 describe('constructor()', () => {
@@ -564,8 +574,12 @@ describe('lookup()', () => {
       const customIPData = new IPData(TEST_API_KEY, { ttl: 1 }, undefined, { dispatcher: mockAgent });
       mockLookup('/', MOCK_DEFAULT_IP_DATA);
       await customIPData.lookup();
-      const info = ipdata.cache.get(DEFAULT_IP_KEY);
-      expect(info).toBeUndefined();
+      await waitForTtlExpiry();
+      expect(customIPData.cache.get(DEFAULT_IP_KEY)).toBeUndefined();
+      // The entry has expired, so the next lookup is sent to the API again.
+      mockLookup('/', MOCK_DEFAULT_IP_DATA);
+      const info = await customIPData.lookup();
+      expect(info).toHaveProperty('ip', MOCK_DEFAULT_IP_DATA.ip);
     });
   });
 
@@ -594,8 +608,12 @@ describe('lookup()', () => {
       const customIPData = new IPData(TEST_API_KEY, { ttl: 1 }, undefined, { dispatcher: mockAgent });
       mockLookup('/1.1.1.1', MOCK_IP1_DATA);
       await customIPData.lookup(TEST_IP);
-      const info = ipdata.cache.get(TEST_IP);
-      expect(info).toBeUndefined();
+      await waitForTtlExpiry();
+      expect(customIPData.cache.get(TEST_IP)).toBeUndefined();
+      // The entry has expired, so the next lookup is sent to the API again.
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      const info = await customIPData.lookup(TEST_IP);
+      expect(info).toHaveProperty('ip', TEST_IP);
     });
   });
 
@@ -636,6 +654,84 @@ describe('lookup()', () => {
       expect(info).toHaveProperty(field1, TEST_IP);
       expect(info).toHaveProperty(field2, false);
       expect(info).toHaveProperty('status');
+    });
+  });
+
+  describe('cache keys', () => {
+    it('should not serve a selectField result to a full lookup of the same address', async () => {
+      mockLookup('/1.1.1.1/city', 'Los Angeles');
+      const city = await ipdata.lookup(TEST_IP, 'city');
+      expect(city).toEqual({ city: 'Los Angeles', status: 200 });
+      expect(ipdata.cache.has(TEST_IP)).toBe(false);
+
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      const info = await ipdata.lookup(TEST_IP);
+      expect(info).toHaveProperty('country_name', 'United States');
+      expect(ipdata.cache.get(TEST_IP)).toBe(info);
+    });
+
+    it('should not serve a fields result to a full lookup of the same address', async () => {
+      mockLookup('/1.1.1.1', { ip: TEST_IP, city: 'Los Angeles' }, { params: { fields: 'ip,city' } });
+      const partial = await ipdata.lookup(TEST_IP, undefined, ['ip', 'city']);
+      expect(partial).toEqual({ ip: TEST_IP, city: 'Los Angeles', status: 200 });
+      expect(ipdata.cache.has(TEST_IP)).toBe(false);
+
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      const info = await ipdata.lookup(TEST_IP);
+      expect(info).toHaveProperty('country_name', 'United States');
+    });
+
+    it('should not serve a full result to a filtered lookup of the same address', async () => {
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      await ipdata.lookup(TEST_IP);
+
+      mockLookup('/1.1.1.1/city', 'Los Angeles');
+      const city = await ipdata.lookup(TEST_IP, 'city');
+      expect(city).toEqual({ city: 'Los Angeles', status: 200 });
+
+      mockLookup('/1.1.1.1', { ip: TEST_IP }, { params: { fields: 'ip' } });
+      const partial = await ipdata.lookup(TEST_IP, undefined, ['ip']);
+      expect(partial).toEqual({ ip: TEST_IP, status: 200 });
+    });
+
+    it('should serve repeated identical filtered lookups from the cache', async () => {
+      mockLookup('/1.1.1.1/city', 'Los Angeles');
+      const first = await ipdata.lookup(TEST_IP, 'city');
+      const second = await ipdata.lookup({ ip: TEST_IP, selectField: 'city' });
+      expect(second).toBe(first);
+
+      mockLookup('/1.1.1.1', { ip: TEST_IP, city: 'Los Angeles' }, { params: { fields: 'ip,city' } });
+      const partial = await ipdata.lookup(TEST_IP, undefined, ['ip', 'city']);
+      // The same fields in another order select the same data, so the entry is shared.
+      const reordered = await ipdata.lookup(TEST_IP, undefined, ['city', 'ip']);
+      expect(reordered).toBe(partial);
+    });
+
+    it('should cache different selections of the same address separately', async () => {
+      mockLookup('/1.1.1.1/city', 'Los Angeles');
+      mockLookup('/1.1.1.1/is_eu', false);
+      const city = await ipdata.lookup(TEST_IP, 'city');
+      const isEu = await ipdata.lookup(TEST_IP, 'is_eu');
+      expect(city).toEqual({ city: 'Los Angeles', status: 200 });
+      expect(isEu).toEqual({ is_eu: false, status: 200 });
+    });
+
+    it('should key lookups of the default address by selection as well', async () => {
+      mockLookup('/is_eu', false);
+      await ipdata.lookup(undefined, 'is_eu');
+      expect(ipdata.cache.has(DEFAULT_IP_KEY)).toBe(false);
+
+      mockLookup('/', MOCK_DEFAULT_IP_DATA);
+      const info = await ipdata.lookup();
+      expect(info).toHaveProperty('ip', MOCK_DEFAULT_IP_DATA.ip);
+      expect(ipdata.cache.get(DEFAULT_IP_KEY)).toBe(info);
+    });
+
+    it('should validate the parameters before consulting the cache', async () => {
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      await ipdata.lookup(TEST_IP);
+      await expect(ipdata.lookup(TEST_IP, 'field')).rejects.toThrow('field is not a valid field.');
+      await expect(ipdata.lookup(TEST_IP, undefined, ['field'])).rejects.toThrow('field is not a valid field.');
     });
   });
 
@@ -790,6 +886,35 @@ describe('lookup()', () => {
       expect(info.is_satellite).toBeUndefined();
     });
   });
+
+  describe('is_vpn, scores, region_type and nullable fields', () => {
+    it('should expose threat.is_vpn and threat.scores', async () => {
+      mockLookup('/187.13.250.1', SAMPLE_VPN_DATA);
+      const info = await ipdata.lookup('187.13.250.1');
+      expect(info.threat.is_vpn).toBe(true);
+      expect(info.threat.scores).toEqual({ vpn_score: 100, proxy_score: 99, threat_score: 100, trust_score: 0 });
+      expect<number | undefined>(info.threat.scores?.trust_score).toBe(0);
+    });
+
+    it('should pass count through as the string the API sends', async () => {
+      mockLookup('/98.97.34.0', SAMPLE_SATELLITE_DATA);
+      const info = await ipdata.lookup('98.97.34.0');
+      expect<string>(info.count).toBe('0');
+      expect(info.threat.is_vpn).toBe(false);
+      expect(info.threat.scores).toEqual({ vpn_score: 0, proxy_score: 1, threat_score: 8, trust_score: 97 });
+    });
+
+    it('should expose null location fields for an address without a location', async () => {
+      mockLookup('/8.8.8.8', SAMPLE_ANYCAST_DATA);
+      const info = await ipdata.lookup('8.8.8.8');
+      expect(info.city).toBeNull();
+      expect(info.region).toBeNull();
+      expect(info.region_code).toBeNull();
+      expect(info.region_type).toBeNull();
+      expect(info.postal).toBeNull();
+      expect(info.time_zone).toEqual({ name: null, abbr: null, offset: null, is_dst: null, current_time: null });
+    });
+  });
 });
 
 describe('bulkLookup()', () => {
@@ -879,6 +1004,64 @@ describe('bulkLookup()', () => {
     });
   });
 
+  describe('cache keys', () => {
+    it('should cache a fields result separately from a full lookup', async () => {
+      const fields = ['ip', 'is_eu'];
+      mockBulkLookup(
+        [IP1, IP2],
+        [
+          { ip: IP1, is_eu: false },
+          { ip: IP2, is_eu: true },
+        ],
+        { params: { fields: fields.join(',') } },
+      );
+      await ipdata.bulkLookup([IP1, IP2], fields);
+      expect(ipdata.cache.has(IP1)).toBe(false);
+      expect(ipdata.cache.has(IP2)).toBe(false);
+
+      // Neither a full lookup nor a full bulk lookup is served the filtered entries.
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      const single = await ipdata.lookup(IP1);
+      expect(single).toHaveProperty('country_name', 'United States');
+
+      mockBulkLookup([IP2], [MOCK_IP2_DATA]);
+      const info = keyBy(await ipdata.bulkLookup([IP1, IP2]));
+      expect(info[IP1]).toBe(single);
+      expect(info[IP2]).toHaveProperty('country_name', 'United States');
+      expect(ipdata.cache.get(IP2)).toBe(info[IP2]);
+    });
+
+    it('should reuse cached entries only for the same fields', async () => {
+      const fields = ['ip', 'is_eu'];
+      mockLookup('/1.1.1.1', { ip: IP1, is_eu: false }, { params: { fields: fields.join(',') } });
+      await ipdata.lookup(IP1, undefined, fields);
+      mockLookup('/8.8.8.8', MOCK_IP2_DATA);
+      await ipdata.lookup(IP2);
+
+      // IP1 is served from its entry for these fields; the full entry of IP2 does not match, so IP2 is requested.
+      mockBulkLookup([IP2], [{ ip: IP2, is_eu: true }], { params: { fields: fields.join(',') } });
+      const info = keyBy(await ipdata.bulkLookup([IP1, IP2], fields));
+      expect(info[IP1]).toEqual({ ip: IP1, is_eu: false, status: 200 });
+      expect(info[IP2]).toEqual({ ip: IP2, is_eu: true, status: 200 });
+    });
+
+    it('should not cache entries that do not include the ip field', async () => {
+      const fields = ['is_eu'];
+      mockBulkLookup([IP1, IP2], [{ is_eu: false }, { is_eu: true }], { params: { fields: fields.join(',') } });
+      const result = await ipdata.bulkLookup([IP1, IP2], fields);
+      expect(result).toEqual([
+        { is_eu: false, status: 200 },
+        { is_eu: true, status: 200 },
+      ]);
+      expect(ipdata.cache.size).toBe(0);
+
+      // A lookup of the default address with the same fields is not served one of those entries.
+      mockLookup('/', { is_eu: false }, { params: { fields: fields.join(',') } });
+      const info = await ipdata.lookup({ fields });
+      expect(info).toEqual({ is_eu: false, status: 200 });
+    });
+  });
+
   describe('is_satellite, is_anycast and blocklist dates', () => {
     const SATELLITE_IP = '98.97.34.0';
     const ANYCAST_IP = '8.8.8.8';
@@ -917,5 +1100,40 @@ describe('bulkLookup()', () => {
       expect(info[ANYCAST_IP]).toHaveProperty('is_anycast', true);
       expect(info[ANYCAST_IP].is_satellite).toBeUndefined();
     });
+  });
+});
+
+describe('User-Agent', () => {
+  const ipdata = new IPData(TEST_API_KEY, undefined, undefined, { dispatcher: mockAgent });
+  const userAgent = `ipdata-node/${packageVersion}`;
+
+  afterEach(() => {
+    ipdata.cache.clear();
+  });
+
+  it('should be derived from the package version', () => {
+    expect(packageVersion).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it('should identify the library on lookup()', async () => {
+    mockPool
+      .intercept({ path: apiPath('/1.1.1.1'), method: 'GET', headers: { 'user-agent': userAgent } })
+      .reply(200, JSON.stringify(MOCK_IP1_DATA), { headers: { 'content-type': 'application/json' } });
+    const info = await ipdata.lookup(TEST_IP);
+    expect(info).toHaveProperty('ip', TEST_IP);
+  });
+
+  it('should identify the library on bulkLookup()', async () => {
+    const ips = [TEST_IP, '8.8.8.8'];
+    mockPool
+      .intercept({
+        path: apiPath('/bulk'),
+        method: 'POST',
+        body: JSON.stringify(ips),
+        headers: { 'user-agent': userAgent, 'content-type': 'application/json', accept: 'application/json' },
+      })
+      .reply(200, JSON.stringify([MOCK_IP1_DATA, MOCK_IP2_DATA]), { headers: { 'content-type': 'application/json' } });
+    const result = await ipdata.bulkLookup(ips);
+    expect(result).toHaveLength(2);
   });
 });

@@ -1,6 +1,6 @@
 # IPData Node.js Library
 
-[![](https://github.com/ipdata/node/workflows/CI/badge.svg)](https://github.com/ipdata/node/actions)
+[![Lint and Test](https://github.com/ipdata/node/actions/workflows/default.yml/badge.svg)](https://github.com/ipdata/node/actions/workflows/default.yml)
 
 A Node.js library for the [ipdata](https://ipdata.co) API. Look up IP addresses for geolocation, threat intelligence, company data, and more.
 
@@ -56,6 +56,8 @@ const ipdata = new IPData('<apiKey>');
 #### Caching
 
 The library caches up to 4096 responses for 24 hours using an LRU cache by default. You can configure the cache by passing an options object as the second parameter.
+
+Entries are keyed by IP address and by what was requested: a lookup restricted with `selectField` or `fields` is cached separately from a full lookup of the same address, so a filtered result is never returned for a full lookup, or the other way round. Only identical selections share an entry (the order of `fields` does not matter). Full lookups are stored under the address itself, so `ipdata.cache.has('1.1.1.1')` tells you whether a complete record is cached.
 
 ```js
 const ipdata = new IPData('<apiKey>', {
@@ -166,14 +168,14 @@ const ipdata = new IPData('<apiKey>', undefined, undefined, {
 });
 ```
 
-Use `dispatcher` to send requests through your own [undici dispatcher](https://undici.nodejs.org/#/docs/api/Dispatcher), for example to reach the API through a proxy or to intercept requests in tests. `http2` and `keepAliveTimeout` only apply to the pool the library creates itself.
+Use `dispatcher` to send requests through your own [undici dispatcher](https://undici.nodejs.org/#/docs/api/Dispatcher), for example to reach the API through a proxy or to intercept requests in tests. `http2` and `keepAliveTimeout` only apply to the pool the library creates itself: a dispatcher you inject negotiates HTTP/2 only if it is configured to. For undici's `ProxyAgent` and `EnvHttpProxyAgent` that means `allowH2: true` together with `requestTls: { allowH2: true }`, because the protocols offered on the TLS connection tunnelled through the proxy come from `requestTls`.
 
 ```js
 import { EnvHttpProxyAgent, MockAgent, ProxyAgent } from 'undici';
 
-// Explicit proxy
+// Explicit proxy, negotiating HTTP/2 with the API through the tunnel
 const ipdata = new IPData('<apiKey>', undefined, undefined, {
-  dispatcher: new ProxyAgent('http://proxy.example.com:8080'),
+  dispatcher: new ProxyAgent({ uri: 'http://proxy.example.com:8080', allowH2: true, requestTls: { allowH2: true } }),
 });
 
 // HTTP_PROXY, HTTPS_PROXY and NO_PROXY from the environment
@@ -191,6 +193,8 @@ const ipdata = new IPData('<apiKey>', undefined, undefined, { dispatcher: mockAg
 
 A request that fails because the server closed a pooled connection before any response byte arrived (connection reset or closed) is sent once more on a fresh connection; this also covers the `POST` made by `bulkLookup()`. HTTP error statuses are never retried.
 
+Every request carries a `User-Agent` header of the form `ipdata-node/<version>`, with the version of the installed package.
+
 ## Response Fields
 
 The following fields are available for use with `selectField` and `fields`:
@@ -207,7 +211,7 @@ The following fields are available for use with `selectField` and `fields`:
 
 **`is_anycast`** — `true` when the address is anycast. Also included only when `true`.
 
-**`threat`** — `{ is_tor, is_icloud_relay, is_proxy, is_datacenter, is_anonymous, is_known_attacker, is_known_abuser, is_threat, is_bogon, blocklists }`
+**`threat`** — `{ is_tor, is_vpn, is_icloud_relay, is_proxy, is_datacenter, is_anonymous, is_known_attacker, is_known_abuser, is_threat, is_bogon, blocklists, scores }`
 
 Each entry of `threat.blocklists` is `{ name, site, type, first_seen, last_seen, days_seen }`:
 
@@ -216,6 +220,14 @@ Each entry of `threat.blocklists` is `{ name, site, type, first_seen, last_seen,
 - **`days_seen`** — number of days the address has appeared on that blocklist (integer)
 
 Some feeds, for example ipdata's own `vpn` list, do not report these three, so an entry may contain only `name`, `site` and `type`. The dates are passed through as strings.
+
+**`threat.scores`** — `{ vpn_score, proxy_score, threat_score, trust_score }`, each a number between 0 and 100.
+
+**`region_type`** — the type of administrative region named by `region`; `null` when the location is unknown.
+
+**`count`** — the request count for your API key, returned by the API as a string (for example `"0"`).
+
+`city`, `region`, `region_code`, `region_type`, `postal` and every value of `time_zone` are `null` when an address has no known location, as is the case for anycast addresses; the TypeScript types declare them as nullable.
 
 ## TypeScript
 

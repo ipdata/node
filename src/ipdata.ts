@@ -1,6 +1,10 @@
 import { isIP as netIsIP } from 'net';
 import { LRUCache } from 'lru-cache';
-import { fetch, Agent, type Dispatcher, type RequestInit, type Response } from 'undici';
+import { fetch, Agent, Headers, type Dispatcher, type RequestInit, type Response } from 'undici';
+
+// package.json is part of every install of this package, so the version is available at runtime.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { version }: { version: string } = require('../package.json');
 
 const CACHE_MAX = 4096; // max number of items
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
@@ -8,6 +12,7 @@ const KEEP_ALIVE_TIMEOUT = 1000 * 60; // close a pooled connection after 60 seco
 const KEEP_ALIVE_MAX_TIMEOUT = 1000 * 60 * 10; // upper bound when the server sends a larger keep-alive hint
 const KEEP_ALIVE_PROBE_INTERVAL = 1000 * 30; // HTTP/2 PING and TCP keepalive probe interval
 const DEFAULT_IP = 'DEFAULT_IP';
+const USER_AGENT = `ipdata-node/${version}`;
 const VALID_FIELDS = [
   'ip',
   'is_eu',
@@ -45,29 +50,39 @@ function isValidIP(ip: string): boolean {
   return ip === DEFAULT_IP || netIsIP(ip) !== 0;
 }
 
-function isValidSelectField(field: string): boolean {
-  const index = VALID_FIELDS.indexOf(field);
-
-  if (index === -1) {
+function validateSelectField(field: string): void {
+  if (VALID_FIELDS.indexOf(field) === -1) {
     throw new Error(`${field} is not a valid field.`);
   }
-
-  return true;
 }
 
-function isValidFields(fields: string[]): boolean {
+function validateFields(fields: string[]): void {
   if (!Array.isArray(fields)) {
     throw new Error('Fields should be an array.');
   }
 
   fields.forEach((field) => {
-    const index = VALID_FIELDS.indexOf(field);
-    if (index === -1) {
+    if (VALID_FIELDS.indexOf(field) === -1) {
       throw new Error(`${field} is not a valid field.`);
     }
   });
+}
 
-  return true;
+// Cache entries are keyed by address and by what was requested, so a lookup restricted to a single field or to a
+// list of fields is never served to a full lookup of the same address, or the other way round. The order of
+// `fields` does not change the response, so the key uses them sorted.
+function cacheKey(ip: string | undefined, selectField?: string, fields?: string[]): string {
+  const address = ip || DEFAULT_IP;
+
+  if (selectField) {
+    return `${address}/${selectField}`;
+  }
+
+  if (fields) {
+    return `${address}?fields=${[...fields].sort().join(',')}`;
+  }
+
+  return address;
 }
 
 interface TransportError {
@@ -143,16 +158,19 @@ export interface LookupResponse {
   is_satellite?: boolean;
   /** true for anycast addresses. The API includes the key only when it is true and omits it otherwise. */
   is_anycast?: boolean;
-  city?: string;
-  region?: string;
-  region_code?: string;
+  /** Null, like region, region_code, region_type and postal, when the location is unknown (for example anycast). */
+  city?: string | null;
+  region?: string | null;
+  region_code?: string | null;
+  /** Type of the administrative region named by `region`. */
+  region_type?: string | null;
   country_name: string;
   country_code: string;
   continent_name: string;
   continent_code: string;
   latitude: number;
   longitude: number;
-  postal?: string;
+  postal?: string | null;
   calling_code: string;
   flag: string;
   emoji_flag: string;
@@ -183,15 +201,18 @@ export interface LookupResponse {
     native: string;
     plural: string;
   };
+  /** Every time_zone value is null when the location is unknown. */
   time_zone: {
-    name: string;
-    abbr: string;
-    offset: string;
-    is_dst: boolean;
-    current_time: string;
+    name: string | null;
+    abbr: string | null;
+    offset: string | null;
+    is_dst: boolean | null;
+    current_time: string | null;
   };
   threat: {
     is_tor: boolean;
+    /** true when the address belongs to a VPN provider. */
+    is_vpn?: boolean;
     is_proxy: boolean;
     is_anonymous: boolean;
     is_known_attacker: boolean;
@@ -211,8 +232,16 @@ export interface LookupResponse {
       /** Number of days the address has been seen on this list. Omitted together with the dates. */
       days_seen?: number;
     }[];
+    /** Risk scores between 0 and 100. */
+    scores?: {
+      vpn_score: number;
+      proxy_score: number;
+      threat_score: number;
+      trust_score: number;
+    };
   };
-  count: number;
+  /** Request count for the API key, returned by the API as a string (for example "0"). */
+  count: string;
   status: number;
 }
 
@@ -260,7 +289,9 @@ export class IPData {
   }
 
   private async request(url: URL, init?: RequestInit): Promise<Response> {
-    const options: RequestInit = { ...init, dispatcher: this.dispatcher };
+    const headers = new Headers(init?.headers);
+    headers.set('User-Agent', USER_AGENT);
+    const options: RequestInit = { ...init, headers, dispatcher: this.dispatcher };
 
     try {
       return await fetch(url.toString(), options);
@@ -310,23 +341,34 @@ export class IPData {
       throw new Error(`${ip} is an invalid IP address.`);
     }
 
-    if (this.cache.has(ip || DEFAULT_IP)) {
-      return this.cache.get(ip || DEFAULT_IP)!;
-    }
-
     if (selectField && fields) {
       throw new Error('The selectField and fields parameters cannot be used at the same time.');
     }
 
+    if (selectField) {
+      validateSelectField(selectField);
+    }
+
+    if (fields) {
+      validateFields(fields);
+    }
+
+    const key = cacheKey(ip, selectField, fields);
+    const cached = this.cache.get(key);
+
+    if (cached) {
+      return cached;
+    }
+
     let urlPath = ip || '';
 
-    if (selectField && isValidSelectField(selectField)) {
+    if (selectField) {
       urlPath = urlPath ? `${urlPath}/${selectField}` : selectField;
     }
 
     const url = this.buildUrl(urlPath);
 
-    if (fields && isValidFields(fields)) {
+    if (fields) {
       url.searchParams.set('fields', fields.join(','));
     }
 
@@ -346,8 +388,8 @@ export class IPData {
       data = { ...(responseData as Record<string, unknown>), status: response.status } as LookupResponse;
     }
 
-    this.cache.set(ip || DEFAULT_IP, data);
-    return this.cache.get(ip || DEFAULT_IP)!;
+    this.cache.set(key, data);
+    return data;
   }
 
   async bulkLookup(ips: string[], fields?: string[]): Promise<LookupResponse[]> {
@@ -358,21 +400,23 @@ export class IPData {
       throw new Error('Bulk Lookup requires more than 1 IP Address in the payload.');
     }
 
+    if (fields) {
+      validateFields(fields);
+    }
+
     ips.forEach((ip) => {
       if (!isValidIP(ip)) {
         throw new Error(`${ip} is an invalid IP address.`);
       }
 
-      if (this.cache.has(ip)) {
-        responses.push(this.cache.get(ip)!);
+      const cached = this.cache.get(cacheKey(ip, undefined, fields));
+
+      if (cached) {
+        responses.push(cached);
       } else {
         bulk.push(ip);
       }
     });
-
-    if (fields && isValidFields(fields)) {
-      // validation only — fields are passed as query params below
-    }
 
     if (bulk.length > 0) {
       const url = this.buildUrl('bulk');
@@ -394,8 +438,14 @@ export class IPData {
 
       const responseData = (await response.json()) as LookupResponse[];
       responseData.forEach((info) => {
-        this.cache.set(info.ip, { ...info, status: response.status });
-        responses.push(this.cache.get(info.ip)!);
+        const data: LookupResponse = { ...info, status: response.status };
+
+        // Entries are cached by address, which a fields selection without "ip" leaves out of the response.
+        if (typeof info.ip === 'string') {
+          this.cache.set(cacheKey(info.ip, undefined, fields), data);
+        }
+
+        responses.push(data);
       });
     }
 
