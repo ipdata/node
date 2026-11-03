@@ -1,6 +1,10 @@
 import { isIP as netIsIP } from 'net';
 import { LRUCache } from 'lru-cache';
-import { fetch, Agent, type Dispatcher, type RequestInit, type Response } from 'undici';
+import { fetch, Agent, Headers, type Dispatcher, type RequestInit, type Response } from 'undici';
+
+// package.json is part of every install of this package, so the version is available at runtime.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { version }: { version: string } = require('../package.json');
 
 const CACHE_MAX = 4096; // max number of items
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
@@ -8,6 +12,7 @@ const KEEP_ALIVE_TIMEOUT = 1000 * 60; // close a pooled connection after 60 seco
 const KEEP_ALIVE_MAX_TIMEOUT = 1000 * 60 * 10; // upper bound when the server sends a larger keep-alive hint
 const KEEP_ALIVE_PROBE_INTERVAL = 1000 * 30; // HTTP/2 PING and TCP keepalive probe interval
 const DEFAULT_IP = 'DEFAULT_IP';
+const USER_AGENT = `ipdata-node/${version}`;
 const VALID_FIELDS = [
   'ip',
   'is_eu',
@@ -284,7 +289,9 @@ export class IPData {
   }
 
   private async request(url: URL, init?: RequestInit): Promise<Response> {
-    const options: RequestInit = { ...init, dispatcher: this.dispatcher };
+    const headers = new Headers(init?.headers);
+    headers.set('User-Agent', USER_AGENT);
+    const options: RequestInit = { ...init, headers, dispatcher: this.dispatcher };
 
     try {
       return await fetch(url.toString(), options);

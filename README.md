@@ -193,6 +193,8 @@ const ipdata = new IPData('<apiKey>', undefined, undefined, { dispatcher: mockAg
 
 A request that fails because the server closed a pooled connection before any response byte arrived (connection reset or closed) is sent once more on a fresh connection; this also covers the `POST` made by `bulkLookup()`. HTTP error statuses are never retried.
 
+Every request carries a `User-Agent` header of the form `ipdata-node/<version>`, with the version of the installed package.
+
 ## Response Fields
 
 The following fields are available for use with `selectField` and `fields`:

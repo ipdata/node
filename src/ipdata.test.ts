@@ -4,6 +4,9 @@ import { once } from 'events';
 import { Agent, MockAgent, errors } from 'undici';
 import IPData, { EU_BASE_URL, LookupResponse } from './ipdata';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { version: packageVersion }: { version: string } = require('../package.json');
+
 const TEST_API_KEY = 'test-api-key';
 const TEST_IP = '1.1.1.1';
 const DEFAULT_IP_KEY = 'DEFAULT_IP';
@@ -1097,5 +1100,40 @@ describe('bulkLookup()', () => {
       expect(info[ANYCAST_IP]).toHaveProperty('is_anycast', true);
       expect(info[ANYCAST_IP].is_satellite).toBeUndefined();
     });
+  });
+});
+
+describe('User-Agent', () => {
+  const ipdata = new IPData(TEST_API_KEY, undefined, undefined, { dispatcher: mockAgent });
+  const userAgent = `ipdata-node/${packageVersion}`;
+
+  afterEach(() => {
+    ipdata.cache.clear();
+  });
+
+  it('should be derived from the package version', () => {
+    expect(packageVersion).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it('should identify the library on lookup()', async () => {
+    mockPool
+      .intercept({ path: apiPath('/1.1.1.1'), method: 'GET', headers: { 'user-agent': userAgent } })
+      .reply(200, JSON.stringify(MOCK_IP1_DATA), { headers: { 'content-type': 'application/json' } });
+    const info = await ipdata.lookup(TEST_IP);
+    expect(info).toHaveProperty('ip', TEST_IP);
+  });
+
+  it('should identify the library on bulkLookup()', async () => {
+    const ips = [TEST_IP, '8.8.8.8'];
+    mockPool
+      .intercept({
+        path: apiPath('/bulk'),
+        method: 'POST',
+        body: JSON.stringify(ips),
+        headers: { 'user-agent': userAgent, 'content-type': 'application/json', accept: 'application/json' },
+      })
+      .reply(200, JSON.stringify([MOCK_IP1_DATA, MOCK_IP2_DATA]), { headers: { 'content-type': 'application/json' } });
+    const result = await ipdata.bulkLookup(ips);
+    expect(result).toHaveLength(2);
   });
 });
