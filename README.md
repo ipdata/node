@@ -18,6 +18,7 @@ Requires **Node.js 20.18.1** or later. HTTP requests go through [undici](https:/
 - [Connection reuse and HTTP/2](#connection-reuse-and-http2)
 - [Response Fields](#response-fields)
 - [TypeScript](#typescript)
+- [Releasing](#releasing)
 
 ## Install
 
@@ -236,3 +237,7 @@ The library is written in TypeScript and exports the following types:
 ```ts
 import IPData, { EU_BASE_URL, CacheConfig, HttpConfig, LookupParams, LookupResponse } from 'ipdata';
 ```
+
+## Releasing
+
+Releases are cut by CI. Bump `version` in `package.json` in a pull request (`npm version x.y.z --no-git-tag-version` also updates `package-lock.json`) and merge it. On the merge to `main`, CI tags the commit `vx.y.z`, creates the GitHub release with generated notes and publishes the package to [npm](https://www.npmjs.com/package/ipdata). A merge whose version is already tagged publishes nothing. Pushing a `vx.y.z` tag by hand still publishes that tag.
