@@ -10,6 +10,12 @@ on:
         description: Tag to publish, for example v3.1.0
         required: true
         type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish, for example v3.1.0
+        required: true
+        type: string
 
 jobs:
   lint:
@@ -60,11 +66,14 @@ jobs:
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+      # Publishing authenticates with the job's OpenID Connect token through the
+      # package's trusted publisher configuration on npmjs.com; no npm token is
+      # stored in the repository. The OIDC flow needs npm 11.5.1 or newer.
+      - name: Update npm
+        run: npm install -g npm@latest
       - name: Install dependencies
         run: npm ci
       - name: Build
         run: npm run build
       - name: Release
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
