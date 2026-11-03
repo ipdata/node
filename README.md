@@ -57,6 +57,8 @@ const ipdata = new IPData('<apiKey>');
 
 The library caches up to 4096 responses for 24 hours using an LRU cache by default. You can configure the cache by passing an options object as the second parameter.
 
+Entries are keyed by IP address and by what was requested: a lookup restricted with `selectField` or `fields` is cached separately from a full lookup of the same address, so a filtered result is never returned for a full lookup, or the other way round. Only identical selections share an entry (the order of `fields` does not matter). Full lookups are stored under the address itself, so `ipdata.cache.has('1.1.1.1')` tells you whether a complete record is cached.
+
 ```js
 const ipdata = new IPData('<apiKey>', {
   max: 1000, // max number of entries

@@ -639,6 +639,84 @@ describe('lookup()', () => {
     });
   });
 
+  describe('cache keys', () => {
+    it('should not serve a selectField result to a full lookup of the same address', async () => {
+      mockLookup('/1.1.1.1/city', 'Los Angeles');
+      const city = await ipdata.lookup(TEST_IP, 'city');
+      expect(city).toEqual({ city: 'Los Angeles', status: 200 });
+      expect(ipdata.cache.has(TEST_IP)).toBe(false);
+
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      const info = await ipdata.lookup(TEST_IP);
+      expect(info).toHaveProperty('country_name', 'United States');
+      expect(ipdata.cache.get(TEST_IP)).toBe(info);
+    });
+
+    it('should not serve a fields result to a full lookup of the same address', async () => {
+      mockLookup('/1.1.1.1', { ip: TEST_IP, city: 'Los Angeles' }, { params: { fields: 'ip,city' } });
+      const partial = await ipdata.lookup(TEST_IP, undefined, ['ip', 'city']);
+      expect(partial).toEqual({ ip: TEST_IP, city: 'Los Angeles', status: 200 });
+      expect(ipdata.cache.has(TEST_IP)).toBe(false);
+
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      const info = await ipdata.lookup(TEST_IP);
+      expect(info).toHaveProperty('country_name', 'United States');
+    });
+
+    it('should not serve a full result to a filtered lookup of the same address', async () => {
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      await ipdata.lookup(TEST_IP);
+
+      mockLookup('/1.1.1.1/city', 'Los Angeles');
+      const city = await ipdata.lookup(TEST_IP, 'city');
+      expect(city).toEqual({ city: 'Los Angeles', status: 200 });
+
+      mockLookup('/1.1.1.1', { ip: TEST_IP }, { params: { fields: 'ip' } });
+      const partial = await ipdata.lookup(TEST_IP, undefined, ['ip']);
+      expect(partial).toEqual({ ip: TEST_IP, status: 200 });
+    });
+
+    it('should serve repeated identical filtered lookups from the cache', async () => {
+      mockLookup('/1.1.1.1/city', 'Los Angeles');
+      const first = await ipdata.lookup(TEST_IP, 'city');
+      const second = await ipdata.lookup({ ip: TEST_IP, selectField: 'city' });
+      expect(second).toBe(first);
+
+      mockLookup('/1.1.1.1', { ip: TEST_IP, city: 'Los Angeles' }, { params: { fields: 'ip,city' } });
+      const partial = await ipdata.lookup(TEST_IP, undefined, ['ip', 'city']);
+      // The same fields in another order select the same data, so the entry is shared.
+      const reordered = await ipdata.lookup(TEST_IP, undefined, ['city', 'ip']);
+      expect(reordered).toBe(partial);
+    });
+
+    it('should cache different selections of the same address separately', async () => {
+      mockLookup('/1.1.1.1/city', 'Los Angeles');
+      mockLookup('/1.1.1.1/is_eu', false);
+      const city = await ipdata.lookup(TEST_IP, 'city');
+      const isEu = await ipdata.lookup(TEST_IP, 'is_eu');
+      expect(city).toEqual({ city: 'Los Angeles', status: 200 });
+      expect(isEu).toEqual({ is_eu: false, status: 200 });
+    });
+
+    it('should key lookups of the default address by selection as well', async () => {
+      mockLookup('/is_eu', false);
+      await ipdata.lookup(undefined, 'is_eu');
+      expect(ipdata.cache.has(DEFAULT_IP_KEY)).toBe(false);
+
+      mockLookup('/', MOCK_DEFAULT_IP_DATA);
+      const info = await ipdata.lookup();
+      expect(info).toHaveProperty('ip', MOCK_DEFAULT_IP_DATA.ip);
+      expect(ipdata.cache.get(DEFAULT_IP_KEY)).toBe(info);
+    });
+
+    it('should validate the parameters before consulting the cache', async () => {
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      await ipdata.lookup(TEST_IP);
+      await expect(ipdata.lookup(TEST_IP, 'field')).rejects.toThrow('field is not a valid field.');
+      await expect(ipdata.lookup(TEST_IP, undefined, ['field'])).rejects.toThrow('field is not a valid field.');
+    });
+  });
+
   describe('company field', () => {
     it('should accept company as a valid select field', async () => {
       const companyData = {
@@ -876,6 +954,64 @@ describe('bulkLookup()', () => {
       expect(info[IP2]).toHaveProperty(field1, IP2);
       expect(info[IP2]).toHaveProperty(field2, true);
       expect(info[IP2]).toHaveProperty('status');
+    });
+  });
+
+  describe('cache keys', () => {
+    it('should cache a fields result separately from a full lookup', async () => {
+      const fields = ['ip', 'is_eu'];
+      mockBulkLookup(
+        [IP1, IP2],
+        [
+          { ip: IP1, is_eu: false },
+          { ip: IP2, is_eu: true },
+        ],
+        { params: { fields: fields.join(',') } },
+      );
+      await ipdata.bulkLookup([IP1, IP2], fields);
+      expect(ipdata.cache.has(IP1)).toBe(false);
+      expect(ipdata.cache.has(IP2)).toBe(false);
+
+      // Neither a full lookup nor a full bulk lookup is served the filtered entries.
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      const single = await ipdata.lookup(IP1);
+      expect(single).toHaveProperty('country_name', 'United States');
+
+      mockBulkLookup([IP2], [MOCK_IP2_DATA]);
+      const info = keyBy(await ipdata.bulkLookup([IP1, IP2]));
+      expect(info[IP1]).toBe(single);
+      expect(info[IP2]).toHaveProperty('country_name', 'United States');
+      expect(ipdata.cache.get(IP2)).toBe(info[IP2]);
+    });
+
+    it('should reuse cached entries only for the same fields', async () => {
+      const fields = ['ip', 'is_eu'];
+      mockLookup('/1.1.1.1', { ip: IP1, is_eu: false }, { params: { fields: fields.join(',') } });
+      await ipdata.lookup(IP1, undefined, fields);
+      mockLookup('/8.8.8.8', MOCK_IP2_DATA);
+      await ipdata.lookup(IP2);
+
+      // IP1 is served from its entry for these fields; the full entry of IP2 does not match, so IP2 is requested.
+      mockBulkLookup([IP2], [{ ip: IP2, is_eu: true }], { params: { fields: fields.join(',') } });
+      const info = keyBy(await ipdata.bulkLookup([IP1, IP2], fields));
+      expect(info[IP1]).toEqual({ ip: IP1, is_eu: false, status: 200 });
+      expect(info[IP2]).toEqual({ ip: IP2, is_eu: true, status: 200 });
+    });
+
+    it('should not cache entries that do not include the ip field', async () => {
+      const fields = ['is_eu'];
+      mockBulkLookup([IP1, IP2], [{ is_eu: false }, { is_eu: true }], { params: { fields: fields.join(',') } });
+      const result = await ipdata.bulkLookup([IP1, IP2], fields);
+      expect(result).toEqual([
+        { is_eu: false, status: 200 },
+        { is_eu: true, status: 200 },
+      ]);
+      expect(ipdata.cache.size).toBe(0);
+
+      // A lookup of the default address with the same fields is not served one of those entries.
+      mockLookup('/', { is_eu: false }, { params: { fields: fields.join(',') } });
+      const info = await ipdata.lookup({ fields });
+      expect(info).toEqual({ is_eu: false, status: 200 });
     });
   });
 

@@ -45,29 +45,39 @@ function isValidIP(ip: string): boolean {
   return ip === DEFAULT_IP || netIsIP(ip) !== 0;
 }
 
-function isValidSelectField(field: string): boolean {
-  const index = VALID_FIELDS.indexOf(field);
-
-  if (index === -1) {
+function validateSelectField(field: string): void {
+  if (VALID_FIELDS.indexOf(field) === -1) {
     throw new Error(`${field} is not a valid field.`);
   }
-
-  return true;
 }
 
-function isValidFields(fields: string[]): boolean {
+function validateFields(fields: string[]): void {
   if (!Array.isArray(fields)) {
     throw new Error('Fields should be an array.');
   }
 
   fields.forEach((field) => {
-    const index = VALID_FIELDS.indexOf(field);
-    if (index === -1) {
+    if (VALID_FIELDS.indexOf(field) === -1) {
       throw new Error(`${field} is not a valid field.`);
     }
   });
+}
 
-  return true;
+// Cache entries are keyed by address and by what was requested, so a lookup restricted to a single field or to a
+// list of fields is never served to a full lookup of the same address, or the other way round. The order of
+// `fields` does not change the response, so the key uses them sorted.
+function cacheKey(ip: string | undefined, selectField?: string, fields?: string[]): string {
+  const address = ip || DEFAULT_IP;
+
+  if (selectField) {
+    return `${address}/${selectField}`;
+  }
+
+  if (fields) {
+    return `${address}?fields=${[...fields].sort().join(',')}`;
+  }
+
+  return address;
 }
 
 interface TransportError {
@@ -310,23 +320,34 @@ export class IPData {
       throw new Error(`${ip} is an invalid IP address.`);
     }
 
-    if (this.cache.has(ip || DEFAULT_IP)) {
-      return this.cache.get(ip || DEFAULT_IP)!;
-    }
-
     if (selectField && fields) {
       throw new Error('The selectField and fields parameters cannot be used at the same time.');
     }
 
+    if (selectField) {
+      validateSelectField(selectField);
+    }
+
+    if (fields) {
+      validateFields(fields);
+    }
+
+    const key = cacheKey(ip, selectField, fields);
+    const cached = this.cache.get(key);
+
+    if (cached) {
+      return cached;
+    }
+
     let urlPath = ip || '';
 
-    if (selectField && isValidSelectField(selectField)) {
+    if (selectField) {
       urlPath = urlPath ? `${urlPath}/${selectField}` : selectField;
     }
 
     const url = this.buildUrl(urlPath);
 
-    if (fields && isValidFields(fields)) {
+    if (fields) {
       url.searchParams.set('fields', fields.join(','));
     }
 
@@ -346,8 +367,8 @@ export class IPData {
       data = { ...(responseData as Record<string, unknown>), status: response.status } as LookupResponse;
     }
 
-    this.cache.set(ip || DEFAULT_IP, data);
-    return this.cache.get(ip || DEFAULT_IP)!;
+    this.cache.set(key, data);
+    return data;
   }
 
   async bulkLookup(ips: string[], fields?: string[]): Promise<LookupResponse[]> {
@@ -358,21 +379,23 @@ export class IPData {
       throw new Error('Bulk Lookup requires more than 1 IP Address in the payload.');
     }
 
+    if (fields) {
+      validateFields(fields);
+    }
+
     ips.forEach((ip) => {
       if (!isValidIP(ip)) {
         throw new Error(`${ip} is an invalid IP address.`);
       }
 
-      if (this.cache.has(ip)) {
-        responses.push(this.cache.get(ip)!);
+      const cached = this.cache.get(cacheKey(ip, undefined, fields));
+
+      if (cached) {
+        responses.push(cached);
       } else {
         bulk.push(ip);
       }
     });
-
-    if (fields && isValidFields(fields)) {
-      // validation only — fields are passed as query params below
-    }
 
     if (bulk.length > 0) {
       const url = this.buildUrl('bulk');
@@ -394,8 +417,14 @@ export class IPData {
 
       const responseData = (await response.json()) as LookupResponse[];
       responseData.forEach((info) => {
-        this.cache.set(info.ip, { ...info, status: response.status });
-        responses.push(this.cache.get(info.ip)!);
+        const data: LookupResponse = { ...info, status: response.status };
+
+        // Entries are cached by address, which a fields selection without "ip" leaves out of the response.
+        if (typeof info.ip === 'string') {
+          this.cache.set(cacheKey(info.ip, undefined, fields), data);
+        }
+
+        responses.push(data);
       });
     }
 
