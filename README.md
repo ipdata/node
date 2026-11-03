@@ -1,6 +1,6 @@
 # IPData Node.js Library
 
-[![](https://github.com/ipdata/node/workflows/CI/badge.svg)](https://github.com/ipdata/node/actions)
+[![Lint and Test](https://github.com/ipdata/node/actions/workflows/default.yml/badge.svg)](https://github.com/ipdata/node/actions/workflows/default.yml)
 
 A Node.js library for the [ipdata](https://ipdata.co) API. Look up IP addresses for geolocation, threat intelligence, company data, and more.
 
