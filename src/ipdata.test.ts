@@ -275,6 +275,13 @@ function keyBy(items: LookupResponse[]): Record<string, LookupResponse> {
   }, {});
 }
 
+// Waits long enough for an entry stored with ttl: 1 to expire.
+function waitForTtlExpiry(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 5);
+  });
+}
+
 describe('constructor()', () => {
   it('should throw an error if an apiKey is not provided', () => {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -564,8 +571,12 @@ describe('lookup()', () => {
       const customIPData = new IPData(TEST_API_KEY, { ttl: 1 }, undefined, { dispatcher: mockAgent });
       mockLookup('/', MOCK_DEFAULT_IP_DATA);
       await customIPData.lookup();
-      const info = ipdata.cache.get(DEFAULT_IP_KEY);
-      expect(info).toBeUndefined();
+      await waitForTtlExpiry();
+      expect(customIPData.cache.get(DEFAULT_IP_KEY)).toBeUndefined();
+      // The entry has expired, so the next lookup is sent to the API again.
+      mockLookup('/', MOCK_DEFAULT_IP_DATA);
+      const info = await customIPData.lookup();
+      expect(info).toHaveProperty('ip', MOCK_DEFAULT_IP_DATA.ip);
     });
   });
 
@@ -594,8 +605,12 @@ describe('lookup()', () => {
       const customIPData = new IPData(TEST_API_KEY, { ttl: 1 }, undefined, { dispatcher: mockAgent });
       mockLookup('/1.1.1.1', MOCK_IP1_DATA);
       await customIPData.lookup(TEST_IP);
-      const info = ipdata.cache.get(TEST_IP);
-      expect(info).toBeUndefined();
+      await waitForTtlExpiry();
+      expect(customIPData.cache.get(TEST_IP)).toBeUndefined();
+      // The entry has expired, so the next lookup is sent to the API again.
+      mockLookup('/1.1.1.1', MOCK_IP1_DATA);
+      const info = await customIPData.lookup(TEST_IP);
+      expect(info).toHaveProperty('ip', TEST_IP);
     });
   });
 
