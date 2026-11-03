@@ -11,6 +11,8 @@ const DEFAULT_IP = 'DEFAULT_IP';
 const VALID_FIELDS = [
   'ip',
   'is_eu',
+  'is_satellite',
+  'is_anycast',
   'city',
   'region',
   'region_code',
@@ -137,6 +139,10 @@ export interface LookupParams {
 export interface LookupResponse {
   ip: string;
   is_eu: boolean;
+  /** true for satellite ISP addresses. The API includes the key only when it is true and omits it otherwise. */
+  is_satellite?: boolean;
+  /** true for anycast addresses. The API includes the key only when it is true and omits it otherwise. */
+  is_anycast?: boolean;
   city?: string;
   region?: string;
   region_code?: string;
@@ -194,7 +200,17 @@ export interface LookupResponse {
     is_bogon: boolean;
     is_icloud_relay?: boolean;
     is_datacenter?: boolean;
-    blocklists?: { name: string; site: string; type: string }[];
+    blocklists?: {
+      name: string;
+      site: string;
+      type: string;
+      /** First day the address was seen on this list, as a YYYY-MM-DD string (UTC). Some feeds omit the dates. */
+      first_seen?: string;
+      /** Most recent day the address was seen on this list, as a YYYY-MM-DD string (UTC). */
+      last_seen?: string;
+      /** Number of days the address has been seen on this list. Omitted together with the dates. */
+      days_seen?: number;
+    }[];
   };
   count: number;
   status: number;

@@ -195,7 +195,7 @@ A request that fails because the server closed a pooled connection before any re
 
 The following fields are available for use with `selectField` and `fields`:
 
-`ip`, `is_eu`, `city`, `region`, `region_code`, `country_name`, `country_code`, `continent_name`, `continent_code`, `latitude`, `longitude`, `asn`, `company`, `organisation`, `postal`, `calling_code`, `flag`, `emoji_flag`, `emoji_unicode`, `carrier`, `languages`, `currency`, `time_zone`, `threat`, `count`
+`ip`, `is_eu`, `is_satellite`, `is_anycast`, `city`, `region`, `region_code`, `country_name`, `country_code`, `continent_name`, `continent_code`, `latitude`, `longitude`, `asn`, `company`, `organisation`, `postal`, `calling_code`, `flag`, `emoji_flag`, `emoji_unicode`, `carrier`, `languages`, `currency`, `time_zone`, `threat`, `count`
 
 **`asn`** — `{ asn, name, domain, route, type }`
 
@@ -203,7 +203,19 @@ The following fields are available for use with `selectField` and `fields`:
 
 **`carrier`** — `{ name, mcc, mnc }`
 
+**`is_satellite`** — `true` when the address belongs to a satellite internet provider. The API includes the key only when it is `true` and omits it otherwise, so treat a missing key as `false` (`info.is_satellite ?? false`).
+
+**`is_anycast`** — `true` when the address is anycast. Also included only when `true`.
+
 **`threat`** — `{ is_tor, is_icloud_relay, is_proxy, is_datacenter, is_anonymous, is_known_attacker, is_known_abuser, is_threat, is_bogon, blocklists }`
+
+Each entry of `threat.blocklists` is `{ name, site, type, first_seen, last_seen, days_seen }`:
+
+- **`first_seen`** — first day the address appeared on that blocklist, as a `YYYY-MM-DD` string (UTC)
+- **`last_seen`** — most recent day the address appeared on that blocklist, same format
+- **`days_seen`** — number of days the address has appeared on that blocklist (integer)
+
+Some feeds, for example ipdata's own `vpn` list, do not report these three, so an entry may contain only `name`, `site` and `type`. The dates are passed through as strings.
 
 ## TypeScript
 

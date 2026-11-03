@@ -71,6 +71,159 @@ const MOCK_DEFAULT_IP_DATA = {
   ip: '203.0.113.1',
 };
 
+// Satellite ISP: is_satellite is present, is_anycast is not.
+const SAMPLE_SATELLITE_DATA = {
+  ip: '98.97.34.0',
+  is_satellite: true,
+  is_eu: false,
+  city: 'Seattle',
+  country_code: 'US',
+  asn: {
+    asn: 'AS14593',
+    name: 'Space Exploration Technologies Corporation',
+    domain: 'spacex.com',
+    route: '98.97.32.0/21',
+    type: 'business',
+  },
+  threat: {
+    is_tor: false,
+    is_vpn: false,
+    is_icloud_relay: false,
+    is_proxy: false,
+    is_datacenter: false,
+    is_anonymous: false,
+    is_known_attacker: false,
+    is_known_abuser: false,
+    is_threat: false,
+    is_bogon: false,
+    blocklists: [],
+    scores: { vpn_score: 0, proxy_score: 1, threat_score: 8, trust_score: 97 },
+  },
+  count: '0',
+};
+
+// Anycast address with dated blocklist entries: is_anycast is present, is_satellite is not.
+const SAMPLE_ANYCAST_DATA = {
+  ip: '8.8.8.8',
+  is_anycast: true,
+  is_eu: false,
+  city: null,
+  region: null,
+  region_code: null,
+  region_type: null,
+  country_name: 'United States',
+  country_code: 'US',
+  continent_name: 'North America',
+  continent_code: 'NA',
+  latitude: 39.7599983215332,
+  longitude: -98.5,
+  postal: null,
+  calling_code: '1',
+  flag: 'https://ipdata.co/flags/us.png',
+  emoji_flag: '\u{1F1FA}\u{1F1F8}',
+  emoji_unicode: 'U+1F1FA U+1F1F8',
+  asn: { asn: 'AS15169', name: 'Google LLC', domain: 'about.google', route: '8.8.8.0/24', type: 'hosting' },
+  company: { name: 'Google LLC', domain: 'about.google', network: '8.8.8.0/24', type: 'hosting' },
+  languages: [{ name: 'English', native: 'English', code: 'en' }],
+  currency: { name: 'US Dollar', code: 'USD', symbol: '$', native: '$', plural: 'US dollars' },
+  time_zone: { name: null, abbr: null, offset: null, is_dst: null, current_time: null },
+  threat: {
+    is_tor: false,
+    is_vpn: false,
+    is_icloud_relay: false,
+    is_proxy: false,
+    is_datacenter: true,
+    is_anonymous: false,
+    is_known_attacker: false,
+    is_known_abuser: false,
+    is_threat: false,
+    is_bogon: false,
+    blocklists: [
+      {
+        days_seen: 1,
+        first_seen: '2026-11-02',
+        last_seen: '2026-11-02',
+        name: 'ipdata',
+        site: 'https://ipdata.co',
+        type: 'cloud',
+      },
+      {
+        days_seen: 1,
+        first_seen: '2026-11-02',
+        last_seen: '2026-11-02',
+        name: 'ipdata',
+        site: 'https://ipdata.co',
+        type: 'open_resolvers',
+      },
+    ],
+    scores: { vpn_score: 100, proxy_score: 93, threat_score: 100, trust_score: 2 },
+  },
+  count: '0',
+};
+
+// VPN exit: neither top-level flag is present and the third blocklist entry has no dates.
+const SAMPLE_VPN_DATA = {
+  ip: '187.13.250.1',
+  is_eu: false,
+  threat: {
+    is_tor: false,
+    is_vpn: true,
+    is_icloud_relay: false,
+    is_proxy: false,
+    is_datacenter: true,
+    is_anonymous: true,
+    is_known_attacker: true,
+    is_known_abuser: true,
+    is_threat: true,
+    is_bogon: false,
+    blocklists: [
+      {
+        days_seen: 2,
+        first_seen: '2026-10-31',
+        last_seen: '2026-11-02',
+        name: 'Gluetun',
+        site: 'https://github.com/qdm12/gluetun',
+        type: 'vpn',
+      },
+      {
+        days_seen: 1,
+        first_seen: '2026-11-02',
+        last_seen: '2026-11-02',
+        name: 'ipdata',
+        site: 'https://ipdata.co',
+        type: 'cloud',
+      },
+      { name: 'ipdata', site: 'https://ipdata.co', type: 'vpn' },
+      {
+        days_seen: 2,
+        first_seen: '2026-10-31',
+        last_seen: '2026-11-02',
+        name: 'NordVPN',
+        site: 'https://nordvpn.com',
+        type: 'vpn',
+      },
+      {
+        days_seen: 2,
+        first_seen: '2026-10-31',
+        last_seen: '2026-11-02',
+        name: 'Wikimedia Global Blocklist',
+        site: 'https://wikimedia.org',
+        type: 'general',
+      },
+      {
+        days_seen: 2,
+        first_seen: '2026-10-31',
+        last_seen: '2026-11-02',
+        name: 'X4BNet',
+        site: 'https://github.com/X4BNet/lists_vpn',
+        type: 'vpn',
+      },
+    ],
+    scores: { vpn_score: 100, proxy_score: 99, threat_score: 100, trust_score: 0 },
+  },
+  count: '0',
+};
+
 // Every request in this file goes through an undici MockAgent injected via httpConfig.dispatcher, or through a
 // loopback server; nothing reaches the network.
 const mockAgent = new MockAgent();
@@ -563,6 +716,80 @@ describe('lookup()', () => {
       expect(info.languages[0]).toHaveProperty('code');
     });
   });
+
+  describe('is_satellite, is_anycast and blocklist dates', () => {
+    it('should expose is_satellite for a satellite ISP and leave is_anycast undefined', async () => {
+      mockLookup('/98.97.34.0', SAMPLE_SATELLITE_DATA);
+      const info = await ipdata.lookup('98.97.34.0');
+      expect(info.is_satellite).toBe(true);
+      expect(info.is_anycast).toBeUndefined();
+      expect(info.is_anycast ?? false).toBe(false);
+      expect(info.threat.blocklists).toEqual([]);
+    });
+
+    it('should expose is_anycast and dated blocklist entries for an anycast address', async () => {
+      mockLookup('/8.8.8.8', SAMPLE_ANYCAST_DATA);
+      const info = await ipdata.lookup('8.8.8.8');
+      expect(info.is_anycast).toBe(true);
+      expect(info.is_satellite).toBeUndefined();
+      expect(info.is_satellite ?? false).toBe(false);
+      expect(info.threat.blocklists).toHaveLength(2);
+      expect(info.threat.blocklists![0]).toEqual({
+        days_seen: 1,
+        first_seen: '2026-11-02',
+        last_seen: '2026-11-02',
+        name: 'ipdata',
+        site: 'https://ipdata.co',
+        type: 'cloud',
+      });
+      expect(typeof info.threat.blocklists![1].first_seen).toBe('string');
+      expect(typeof info.threat.blocklists![1].days_seen).toBe('number');
+    });
+
+    it('should leave both flags undefined and tolerate a blocklist entry without dates', async () => {
+      mockLookup('/187.13.250.1', SAMPLE_VPN_DATA);
+      const info = await ipdata.lookup('187.13.250.1');
+      expect(info.is_satellite).toBeUndefined();
+      expect(info.is_anycast).toBeUndefined();
+      expect(info.threat.blocklists).toHaveLength(6);
+      const undated = info.threat.blocklists![2];
+      expect(undated).toEqual({ name: 'ipdata', site: 'https://ipdata.co', type: 'vpn' });
+      expect(undated.first_seen).toBeUndefined();
+      expect(undated.last_seen).toBeUndefined();
+      expect(undated.days_seen).toBeUndefined();
+      expect(info.threat.blocklists![0]).toMatchObject({
+        name: 'Gluetun',
+        days_seen: 2,
+        first_seen: '2026-10-31',
+        last_seen: '2026-11-02',
+      });
+    });
+
+    it('should pass unknown keys through unchanged', async () => {
+      mockLookup('/98.97.34.0', { ...SAMPLE_SATELLITE_DATA, future_field: 'kept' });
+      const info = await ipdata.lookup('98.97.34.0');
+      expect(info).toHaveProperty('future_field', 'kept');
+      expect(info).toHaveProperty('is_satellite', true);
+    });
+
+    it('should accept is_satellite and is_anycast as select fields', async () => {
+      mockLookup('/98.97.34.0/is_satellite', true);
+      const satellite = await ipdata.lookup('98.97.34.0', 'is_satellite');
+      expect(satellite).toHaveProperty('is_satellite', true);
+      mockLookup('/8.8.8.8/is_anycast', true);
+      const anycast = await ipdata.lookup({ ip: '8.8.8.8', selectField: 'is_anycast' });
+      expect(anycast).toHaveProperty('is_anycast', true);
+    });
+
+    it('should accept is_satellite and is_anycast in the fields array', async () => {
+      const fields = ['ip', 'is_satellite', 'is_anycast'];
+      mockLookup('/8.8.8.8', { ip: '8.8.8.8', is_anycast: true }, { params: { fields: fields.join(',') } });
+      const info = await ipdata.lookup('8.8.8.8', undefined, fields);
+      expect(info).toHaveProperty('ip', '8.8.8.8');
+      expect(info).toHaveProperty('is_anycast', true);
+      expect(info.is_satellite).toBeUndefined();
+    });
+  });
 });
 
 describe('bulkLookup()', () => {
@@ -649,6 +876,46 @@ describe('bulkLookup()', () => {
       expect(info[IP2]).toHaveProperty(field1, IP2);
       expect(info[IP2]).toHaveProperty(field2, true);
       expect(info[IP2]).toHaveProperty('status');
+    });
+  });
+
+  describe('is_satellite, is_anycast and blocklist dates', () => {
+    const SATELLITE_IP = '98.97.34.0';
+    const ANYCAST_IP = '8.8.8.8';
+
+    it('should return the new fields per item', async () => {
+      const ips = [SATELLITE_IP, ANYCAST_IP];
+      mockBulkLookup(ips, [SAMPLE_SATELLITE_DATA, SAMPLE_ANYCAST_DATA]);
+      const info = keyBy(await ipdata.bulkLookup(ips));
+      expect(info[SATELLITE_IP].is_satellite).toBe(true);
+      expect(info[SATELLITE_IP].is_anycast).toBeUndefined();
+      expect(info[SATELLITE_IP].threat.blocklists).toEqual([]);
+      expect(info[ANYCAST_IP].is_anycast).toBe(true);
+      expect(info[ANYCAST_IP].is_satellite).toBeUndefined();
+      expect(info[ANYCAST_IP].threat.blocklists![1]).toMatchObject({
+        type: 'open_resolvers',
+        days_seen: 1,
+        first_seen: '2026-11-02',
+        last_seen: '2026-11-02',
+      });
+    });
+
+    it('should accept is_satellite and is_anycast in the fields array', async () => {
+      const ips = [SATELLITE_IP, ANYCAST_IP];
+      const fields = ['ip', 'is_satellite', 'is_anycast'];
+      mockBulkLookup(
+        ips,
+        [
+          { ip: SATELLITE_IP, is_satellite: true },
+          { ip: ANYCAST_IP, is_anycast: true },
+        ],
+        { params: { fields: fields.join(',') } },
+      );
+      const info = keyBy(await ipdata.bulkLookup(ips, fields));
+      expect(info[SATELLITE_IP]).toHaveProperty('is_satellite', true);
+      expect(info[SATELLITE_IP].is_anycast).toBeUndefined();
+      expect(info[ANYCAST_IP]).toHaveProperty('is_anycast', true);
+      expect(info[ANYCAST_IP].is_satellite).toBeUndefined();
     });
   });
 });
