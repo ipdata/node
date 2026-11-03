@@ -4,7 +4,7 @@
 
 A Node.js library for the [ipdata](https://ipdata.co) API. Look up IP addresses for geolocation, threat intelligence, company data, and more.
 
-Requires **Node.js 18** or later. Uses the native `fetch` API with zero HTTP dependencies.
+Requires **Node.js 20.18.1** or later. HTTP requests go through [undici](https://undici.nodejs.org), the HTTP client behind Node's built-in `fetch`, so that connections are pooled and reused across lookups and HTTP/2 is negotiated where available.
 
 **Table of Contents**
 
@@ -15,6 +15,7 @@ Requires **Node.js 18** or later. Uses the native `fetch` API with zero HTTP dep
   - [EU Endpoint](#eu-endpoint)
   - [Lookup](#lookup)
   - [Bulk Lookup](#bulk-lookup)
+- [Connection reuse and HTTP/2](#connection-reuse-and-http2)
 - [Response Fields](#response-fields)
 - [TypeScript](#typescript)
 
@@ -140,6 +141,56 @@ With field filtering:
 const info = await ipdata.bulkLookup(['1.1.1.1', '1.0.0.1'], ['ip', 'city']);
 ```
 
+## Connection reuse and HTTP/2
+
+An `IPData` instance keeps a persistent HTTPS connection pool (an [undici](https://undici.nodejs.org) `Agent`) for as long as it lives. Create one client per process (or one per API key or endpoint), keep it, and reuse it for every lookup: each new client pays a fresh TLS handshake. Requests to api.ipdata.co are multiplexed over HTTP/2 when the platform negotiates it, and fall back to HTTP/1.1 keep-alive otherwise.
+
+Node.js runs your code on one thread, so a single instance can be shared by every request handler in the process; `worker_threads` and `cluster` workers each need their own instance, because connections cannot be shared across threads or processes. Idle HTTP/1.1 connections are closed after 60 seconds, HTTP/2 sessions are kept alive with a PING every 30 seconds, and neither keeps the event loop alive, so a script exits normally without any extra call. Call `await ipdata.close()` at shutdown when you want the pooled connections released immediately. If you pass your own `dispatcher`, you own it and `close()` leaves it open.
+
+```js
+const ipdata = new IPData('<apiKey>');
+
+// ... lookups ...
+
+await ipdata.close();
+```
+
+### HTTP options
+
+The optional fourth constructor argument configures the transport:
+
+```js
+const ipdata = new IPData('<apiKey>', undefined, undefined, {
+  http2: true, // negotiate HTTP/2 via ALPN and fall back to HTTP/1.1 (default: true)
+  keepAliveTimeout: 60000, // milliseconds an idle connection is kept before it is closed (default: 60000)
+});
+```
+
+Use `dispatcher` to send requests through your own [undici dispatcher](https://undici.nodejs.org/#/docs/api/Dispatcher), for example to reach the API through a proxy or to intercept requests in tests. `http2` and `keepAliveTimeout` only apply to the pool the library creates itself.
+
+```js
+import { EnvHttpProxyAgent, MockAgent, ProxyAgent } from 'undici';
+
+// Explicit proxy
+const ipdata = new IPData('<apiKey>', undefined, undefined, {
+  dispatcher: new ProxyAgent('http://proxy.example.com:8080'),
+});
+
+// HTTP_PROXY, HTTPS_PROXY and NO_PROXY from the environment
+const ipdata = new IPData('<apiKey>', undefined, undefined, { dispatcher: new EnvHttpProxyAgent() });
+
+// Tests: canned responses, no network
+const mockAgent = new MockAgent();
+mockAgent.disableNetConnect();
+mockAgent
+  .get('https://api.ipdata.co')
+  .intercept({ path: '/1.1.1.1?api-key=<apiKey>', method: 'GET' })
+  .reply(200, { ip: '1.1.1.1', is_eu: false });
+const ipdata = new IPData('<apiKey>', undefined, undefined, { dispatcher: mockAgent });
+```
+
+A request that fails because the server closed a pooled connection before any response byte arrived (connection reset or closed) is sent once more on a fresh connection; this also covers the `POST` made by `bulkLookup()`. HTTP error statuses are never retried.
+
 ## Response Fields
 
 The following fields are available for use with `selectField` and `fields`:
@@ -159,5 +210,5 @@ The following fields are available for use with `selectField` and `fields`:
 The library is written in TypeScript and exports the following types:
 
 ```ts
-import IPData, { EU_BASE_URL, CacheConfig, LookupParams, LookupResponse } from 'ipdata';
+import IPData, { EU_BASE_URL, CacheConfig, HttpConfig, LookupParams, LookupResponse } from 'ipdata';
 ```
