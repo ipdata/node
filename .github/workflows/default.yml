@@ -37,3 +37,61 @@ jobs:
         run: npm ci
       - name: Test
         run: npm test
+
+  release:
+    needs: [lint, test]
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      created: ${{ steps.release.outputs.created }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Read version
+        id: version
+        run: |
+          version=$(sed -nE 's/^ *"version": *"([^"]+)".*/\1/p' package.json | head -1)
+          if [ -z "$version" ]; then
+            echo "No version found in package.json" >&2
+            exit 1
+          fi
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+      - name: Create tag and release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          status=0
+          git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null || status=$?
+          case "$status" in
+            0)
+              echo "Tag $TAG already exists; nothing to release."
+              echo "created=false" >> "$GITHUB_OUTPUT"
+              ;;
+            2)
+              gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+              echo "created=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Could not check whether tag $TAG exists (git ls-remote exited with $status)" >&2
+              exit "$status"
+              ;;
+          esac
+
+  publish:
+    needs: release
+    if: needs.release.outputs.created == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+    secrets: inherit
