@@ -153,16 +153,19 @@ export interface LookupResponse {
   is_satellite?: boolean;
   /** true for anycast addresses. The API includes the key only when it is true and omits it otherwise. */
   is_anycast?: boolean;
-  city?: string;
-  region?: string;
-  region_code?: string;
+  /** Null, like region, region_code, region_type and postal, when the location is unknown (for example anycast). */
+  city?: string | null;
+  region?: string | null;
+  region_code?: string | null;
+  /** Type of the administrative region named by `region`. */
+  region_type?: string | null;
   country_name: string;
   country_code: string;
   continent_name: string;
   continent_code: string;
   latitude: number;
   longitude: number;
-  postal?: string;
+  postal?: string | null;
   calling_code: string;
   flag: string;
   emoji_flag: string;
@@ -193,15 +196,18 @@ export interface LookupResponse {
     native: string;
     plural: string;
   };
+  /** Every time_zone value is null when the location is unknown. */
   time_zone: {
-    name: string;
-    abbr: string;
-    offset: string;
-    is_dst: boolean;
-    current_time: string;
+    name: string | null;
+    abbr: string | null;
+    offset: string | null;
+    is_dst: boolean | null;
+    current_time: string | null;
   };
   threat: {
     is_tor: boolean;
+    /** true when the address belongs to a VPN provider. */
+    is_vpn?: boolean;
     is_proxy: boolean;
     is_anonymous: boolean;
     is_known_attacker: boolean;
@@ -221,8 +227,16 @@ export interface LookupResponse {
       /** Number of days the address has been seen on this list. Omitted together with the dates. */
       days_seen?: number;
     }[];
+    /** Risk scores between 0 and 100. */
+    scores?: {
+      vpn_score: number;
+      proxy_score: number;
+      threat_score: number;
+      trust_score: number;
+    };
   };
-  count: number;
+  /** Request count for the API key, returned by the API as a string (for example "0"). */
+  count: string;
   status: number;
 }
 

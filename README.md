@@ -209,7 +209,7 @@ The following fields are available for use with `selectField` and `fields`:
 
 **`is_anycast`** — `true` when the address is anycast. Also included only when `true`.
 
-**`threat`** — `{ is_tor, is_icloud_relay, is_proxy, is_datacenter, is_anonymous, is_known_attacker, is_known_abuser, is_threat, is_bogon, blocklists }`
+**`threat`** — `{ is_tor, is_vpn, is_icloud_relay, is_proxy, is_datacenter, is_anonymous, is_known_attacker, is_known_abuser, is_threat, is_bogon, blocklists, scores }`
 
 Each entry of `threat.blocklists` is `{ name, site, type, first_seen, last_seen, days_seen }`:
 
@@ -218,6 +218,14 @@ Each entry of `threat.blocklists` is `{ name, site, type, first_seen, last_seen,
 - **`days_seen`** — number of days the address has appeared on that blocklist (integer)
 
 Some feeds, for example ipdata's own `vpn` list, do not report these three, so an entry may contain only `name`, `site` and `type`. The dates are passed through as strings.
+
+**`threat.scores`** — `{ vpn_score, proxy_score, threat_score, trust_score }`, each a number between 0 and 100.
+
+**`region_type`** — the type of administrative region named by `region`; `null` when the location is unknown.
+
+**`count`** — the request count for your API key, returned by the API as a string (for example `"0"`).
+
+`city`, `region`, `region_code`, `region_type`, `postal` and every value of `time_zone` are `null` when an address has no known location, as is the case for anycast addresses; the TypeScript types declare them as nullable.
 
 ## TypeScript
 

@@ -50,7 +50,7 @@ const MOCK_IP1_DATA = {
     is_datacenter: true,
     blocklists: [],
   },
-  count: 0,
+  count: '0',
 };
 
 const MOCK_IP2_DATA = {
@@ -881,6 +881,35 @@ describe('lookup()', () => {
       expect(info).toHaveProperty('ip', '8.8.8.8');
       expect(info).toHaveProperty('is_anycast', true);
       expect(info.is_satellite).toBeUndefined();
+    });
+  });
+
+  describe('is_vpn, scores, region_type and nullable fields', () => {
+    it('should expose threat.is_vpn and threat.scores', async () => {
+      mockLookup('/187.13.250.1', SAMPLE_VPN_DATA);
+      const info = await ipdata.lookup('187.13.250.1');
+      expect(info.threat.is_vpn).toBe(true);
+      expect(info.threat.scores).toEqual({ vpn_score: 100, proxy_score: 99, threat_score: 100, trust_score: 0 });
+      expect<number | undefined>(info.threat.scores?.trust_score).toBe(0);
+    });
+
+    it('should pass count through as the string the API sends', async () => {
+      mockLookup('/98.97.34.0', SAMPLE_SATELLITE_DATA);
+      const info = await ipdata.lookup('98.97.34.0');
+      expect<string>(info.count).toBe('0');
+      expect(info.threat.is_vpn).toBe(false);
+      expect(info.threat.scores).toEqual({ vpn_score: 0, proxy_score: 1, threat_score: 8, trust_score: 97 });
+    });
+
+    it('should expose null location fields for an address without a location', async () => {
+      mockLookup('/8.8.8.8', SAMPLE_ANYCAST_DATA);
+      const info = await ipdata.lookup('8.8.8.8');
+      expect(info.city).toBeNull();
+      expect(info.region).toBeNull();
+      expect(info.region_code).toBeNull();
+      expect(info.region_type).toBeNull();
+      expect(info.postal).toBeNull();
+      expect(info.time_zone).toEqual({ name: null, abbr: null, offset: null, is_dst: null, current_time: null });
     });
   });
 });
